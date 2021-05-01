@@ -4,6 +4,7 @@
 #include "imgui/imgui.h"
 #include "string_format.hpp"
 #include <algorithm>
+#include "api_key.h"
 
 
 std::unique_ptr<TheTruth> TheTruth::theTruth;
@@ -11,7 +12,7 @@ std::unique_ptr<TheTruth> TheTruth::theTruth;
 bool TheTruth::crashed = false;
 
 TheTruth::TheTruth() {
-	string key = "AIzaSyDXE1rxSTrA_6g0T8ax9goY4MUB4UO5MSg";
+	string key = GOOGLE_API_KEY;
 	sheetsAPI = std::make_shared<SheetsAPI>(key, settings);
 	showSmallUI = true;
 	showBigUI = false;

@@ -120,6 +120,7 @@
     <ClCompile Include="TheTruth.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="api_key.h" />
     <ClInclude Include="arcdps.h" />
     <ClInclude Include="GW2.h" />
     <ClInclude Include="imgui\imconfig.h" />
