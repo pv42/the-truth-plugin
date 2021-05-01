@@ -29,8 +29,11 @@ cd vcpkg
 ./vcpkg integrate install
 ./vcpkg install cpr:x64-windows-static-md
 ```
-Otherwise 
-
+Otherwise a google sheets api key is required place it into api_key.h like this:
+```
+#define GOOGLE_API_KEY "1234567890-abc-defghijklmnopqrst"
+```
+Build using Microsoft Visual Studio 2019
 
 ## LICENSE
 
