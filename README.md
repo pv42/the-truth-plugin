@@ -1,4 +1,4 @@
-# The Truth Plugin
+# The Truth™ Plugin
 
 ## Installation
 Make sure arcdps is installed. If arcdps is not installed, this plugin is simply not loaded and does nothing.  
@@ -38,6 +38,7 @@ Build using Microsoft Visual Studio 2019
 ## LICENSE
 
 This project is licensed with the MIT License.
+The Truth is not an registered trade mark.
 
 ### Dear ImGui
 [Dear ImGui](https://github.com/ocornut/imgui) is also licensed with the MIT License and included as git submodule to this project.
