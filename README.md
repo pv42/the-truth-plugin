@@ -5,9 +5,9 @@ A Guild Wars 2 arcdps plugin to display raid roles ingame.
 ## Installation
 Make sure arcdps is installed. If arcdps is not installed, this plugin is simply not loaded and does nothing.  
 Download the latest version from [github releases](https://github.com/pv42/the-truth-plugin/releases/latest).  
-Then put the .dll file into the same folder as arcdps (normally `<Guild Wars 2>/bin64`).  
+Then put the .dll file into the same folder as arcdps (normally `<Guild Wars 2>/bin64/`).  
 To disable, just remove the .dll or move it to a different folder.
-If you use arcdps plugin manager install into `<Guild Wars 2>/addons/thetruth-settings.json`.
+If you use arcdps plugin manager install into `<Guild Wars 2>/addons/arcdps/`.
 
 ## Quickstart
 set up your own name:
