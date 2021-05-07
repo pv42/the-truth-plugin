@@ -192,8 +192,9 @@ ImVec4 getTextColor(ImVec4& bgColor) {
 
 void TheTruth::drawSmallUI(int wing, vector<string>& roles) {
 	if(showSmallUI) {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(50,0), ImVec2(100, -1));
 		string title = string_format("Wing %d###CurrentWingRole", wing);
-		ImVec2 size(100, ImGui::GetTextLineHeightWithSpacing() * (roles.size() + (settings.ownWindowShowTitle ? 1 : 0)) + (settings.ownWindowShowTitle ? 9 : 5));
+		ImVec2 size(-1, ImGui::GetTextLineHeightWithSpacing() * (roles.size() + (settings.ownWindowShowTitle ? 1 : 0)) + (settings.ownWindowShowTitle ? 9 : 5));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 		if (settings.lockOwnRoleWindow) {
@@ -308,6 +309,79 @@ void TheTruth::drawBigUI(int currentWing) {
 	}
 }
 
+map<int, string> keycodes = {
+	{VK_LBUTTON, "Mouse 1"},
+	{VK_RBUTTON, "Mouse 2"},
+	{VK_CANCEL, "CtrBrk"},
+	{VK_MBUTTON, "Mouse 3"},
+	// VK_XBUTTON1, VK_XBUTTON2
+	{VK_BACK, "BACK"},
+	{VK_TAB, "Tab"},
+	{VK_CLEAR, "Clear"},
+	{VK_RETURN, "Return"},
+	{VK_SHIFT, "Shift"},
+	{VK_CONTROL, "Ctrl"},
+	{VK_MENU, "Alt"},
+	{VK_PAUSE, "Pause"},
+	{VK_CAPITAL, "Caps"},
+	// varios ime keys
+	{VK_ESCAPE, "Escape"},
+	// varios ime keys
+	{VK_SPACE, "Space"},
+	{VK_PRIOR, "Page Up"},
+	{VK_NEXT, "Page Down"},
+	{VK_END, "End"},
+	{VK_HOME, "Home"},
+	{VK_LEFT, "Left"},
+	{VK_UP, "Up"},
+	{VK_RIGHT, "Right"},
+	{VK_DOWN, "Down"},
+	{VK_SELECT, "Select"},
+	{VK_PRINT, "Print"},
+	{VK_EXECUTE, "Execute"},
+	{VK_SNAPSHOT, "PrtScrn"},
+	{VK_INSERT, "Insert"},
+	{VK_DELETE, "Delete"},
+	{VK_HELP, "Help"},
+	// x30 .. x39 -> 0 .. 9
+	// x41 .. x5a -> A .. Z
+	{VK_LWIN, "Windows"},
+	{VK_RWIN, "RWindows"},
+	{VK_APPS, "Application"},
+	{VK_SLEEP, "Sleep"},
+	// x60 .. x69 -> NP0 .. NP9
+	{VK_MULTIPLY, "*"},
+	{VK_ADD, "+"},
+	{VK_SEPARATOR, "|"},
+	{VK_SUBTRACT, "-"},
+	{VK_DECIMAL, "."},
+	{VK_DIVIDE, "/"},
+	// x70 .. x87 -> F1 .. F24
+	{VK_NUMLOCK, "NumLock"},
+	{VK_SCROLL, "ScrollLock"},
+	{VK_LSHIFT, "LShift"},
+	{VK_RSHIFT, "RShift"},
+	{VK_LCONTROL, "LCtrl"},
+	{VK_RCONTROL, "RCtrl"},
+	{VK_LMENU, "LAlt"},
+	{VK_RMENU, "RAlt"},
+	// some browser keys, volume keys, media keys, oem keys
+};
+
+string getKeyName(int keycode) {
+	if (('0' <= keycode && keycode <= '9') || 'A' <= keycode && keycode <= 'Z') {
+		return string(1,(char)keycode);
+	} else if (VK_NUMPAD0 <= keycode && keycode <= VK_NUMPAD9) {
+		return string_format("Numpad%d", keycode - VK_NUMPAD0);
+	} else if (VK_F1 <= keycode && keycode <= VK_F24) {
+		return string_format("F%d", keycode - VK_F1 + 1);
+	} else if (keycodes.count(keycode) > 0) {
+		return keycodes[keycode];
+	} else {
+		return "?";
+	}
+}
+
 void TheTruth::drawSettingsUI() {
 	if (showSetting) {
 		const int char_buff_size = 128;
@@ -345,11 +419,13 @@ void TheTruth::drawSettingsUI() {
 			const static char* allRoleDisplayModes[] = {
 				"Always",
 				"Aerodrome",
-				"Aerodrome and Raids"
+				"Aerodrome and Raids",
+				"Never"
 			};
-			ImGui::Combo("show in maps", (int*)&settings.showAllRolesMode, allRoleDisplayModes, 3);
+			ImGui::Combo("show in maps", (int*)&settings.showAllRolesMode, allRoleDisplayModes, 4);
 			ImGui::Checkbox("colors in all roles", &settings.showBgColorInRolesTable);
-			ImGui::InputInt("Toggle all roles windows key", &settings.windowToggleKey);
+			string allRolesKeyLbl = string_format("all roles hide/show key - %s####all_roles_key", getKeyName(settings.windowToggleKey));
+			ImGui::InputScalar(allRolesKeyLbl.c_str(), ImGuiDataType_U8, (void*)&settings.windowToggleKey, NULL, NULL, "%d");
 			ImGui::Separator();
 			ImGui::Text("Google sheets settings, may only take effect after refresh");
 			char sheet_c[char_buff_size];
