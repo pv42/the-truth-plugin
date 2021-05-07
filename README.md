@@ -22,8 +22,8 @@ Visibility
 ## Features
 Fetches raid roles from an Google Spreadsheet and displays them in games.
 - compleate roster with all roles and all people with selectable raid wings
-![all roles](all_roles.png)
-- small UI showing own roles for the current raid wing
+![all roles](all_roles.png)  
+- small UI showing own roles for the current raid wing  
 ![own roles](own_roles.png)
 - optinal colors based on the conditional formationg of the google sheet
 - displaying information based on the current map you are in
