@@ -31,6 +31,7 @@ public:
 	shared_ptr<vector<string>> getNames();
 	map<string, ImVec4> getColors();
 	void clearCache();
+	bool isDownloading();
 private:
 	Settings settings;
 	atomic_bool downloading;

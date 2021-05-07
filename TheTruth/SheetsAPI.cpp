@@ -300,6 +300,10 @@ map<string, ImVec4> SheetsAPI::getColors() {
 	return colors_cache;
 }
 
+bool SheetsAPI::isDownloading() {
+	return downloading;
+}
+
 SheetsAPI::~SheetsAPI() {
 	if (downloadThread.joinable()) downloadThread.join();
 }

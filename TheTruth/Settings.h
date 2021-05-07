@@ -34,6 +34,7 @@ public:
 	bool showBgColorInOwnRoles;
 	bool ownWindowShowTitle;
 	bool lockOwnRoleWindow;
+	bool showHeaderInOwnRoles;
 	int weekday;
 	bool showWings[7];
 	bool showCurrentWing;

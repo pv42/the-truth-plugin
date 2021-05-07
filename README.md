@@ -47,3 +47,6 @@ This project is licensed with the MIT License.
 
 ### cpr
 [cpr](https://github.com/whoshuu/cpr) is a http library, that is licensed with the MIT License. It is included with vcpkg and itself has dependencies.
+
+### arcdps-extension
+[arcdps-extension](https://github.com/knoxfighter/arcdps-extension) are utility functions used for arcdps plugins, that are licensed with the MIT License. Notably the spinner ImGui extension is used.

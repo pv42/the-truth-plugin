@@ -27,6 +27,7 @@ Settings::Settings() {
 		showBgColorInOwnRoles = true;
 		ownWindowShowTitle = true;
 		lockOwnRoleWindow = false;
+		showHeaderInOwnRoles = false;
 		weekday = 6;
 		for (int wing = 1; wing <= 7; wing++) {
 			showWings[wing - 1] = wing >= 5;
@@ -80,6 +81,9 @@ void Settings::loadFromJson(json j) {
 	}
 	if (j.contains("showCurrentWing") && j["showCurrentWing"].is_boolean()) {
 		lockOwnRoleWindow = j["showCurrentWing"];
+	}
+	if (j.contains("showHeaderInOwnRoles") && j["showHeaderInOwnRoles"].is_boolean()) {
+		showHeaderInOwnRoles = j["showHeaderInOwnRoles"];
 	}
 	if (j.contains("windowToggleKey") && j["windowToggleKey"].is_number_integer()) {
 		windowToggleKey = j["windowToggleKey"];
@@ -156,6 +160,7 @@ json Settings::toJson() const {
 	j["showCurrentWing"] = showCurrentWing;
 	j["showAllRolesMode"] = showAllRolesMode;
 	j["windowToggleKey"] = windowToggleKey;
+	j["showHeaderInOwnRoles"] = showHeaderInOwnRoles;
 	j["showWings"] = json::array();
 	for (int i = 0; i < 7; i++) {
 		j["showWings"][i] = showWings[i];

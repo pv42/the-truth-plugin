@@ -5,6 +5,7 @@
 #include "string_format.hpp"
 #include <algorithm>
 #include "api_key.h"
+#include "Widgets.h"
 
 
 std::unique_ptr<TheTruth> TheTruth::theTruth;
@@ -192,7 +193,11 @@ ImVec4 getTextColor(ImVec4& bgColor) {
 
 void TheTruth::drawSmallUI(int wing, vector<string>& roles) {
 	if(showSmallUI) {
-		ImGui::SetNextWindowSizeConstraints(ImVec2(50,0), ImVec2(100, -1));
+		if(settings.showHeaderInOwnRoles) {
+			ImGui::SetNextWindowSizeConstraints(ImVec2(100, 0), ImVec2(150, -1));
+		} else {
+			ImGui::SetNextWindowSizeConstraints(ImVec2(50,0), ImVec2(100, -1));
+		}
 		string title = string_format("Wing %d###CurrentWingRole", wing);
 		ImVec2 size(-1, ImGui::GetTextLineHeightWithSpacing() * (roles.size() + (settings.ownWindowShowTitle ? 1 : 0)) + (settings.ownWindowShowTitle ? 9 : 5));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -208,19 +213,24 @@ void TheTruth::drawSmallUI(int wing, vector<string>& roles) {
 			}
 			ImGui::SetWindowSize(size, 0); 
 			int index = 0;
-			if(ImGui::BeginTable("ownRolesTable", 1, ImGuiTableFlags_NoPadOuterX)) {
+			if(ImGui::BeginTable("ownRolesTable", settings.showHeaderInOwnRoles ? 2 : 1, ImGuiTableFlags_NoPadOuterX)) {
 				map<string, ImVec4> colorMap = sheetsAPI->getColors();
-				for (string role : roles) {
+				vector<string> headers = sheetsAPI->getHeader(wing);
+				for (int bossIndex = 0; bossIndex < roles.size(); bossIndex ++) {
 					ImGui::TableNextRow();
 					ImGui::TableSetColumnIndex(0);
-					string mapKey = role;
+					if (settings.showHeaderInOwnRoles) {
+						ImGui::TextUnformatted(headers.size() > bossIndex ? headers[bossIndex].c_str() :"");
+						ImGui::TableSetColumnIndex(1);
+					}
+					string mapKey = roles[bossIndex];
 					transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
 					bool showColor = (colorMap.count(mapKey) > 0) && settings.showBgColorInOwnRoles;
 					if (showColor) {
 						ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(colorMap[mapKey]));
 						ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(colorMap[mapKey]));
 					}
-					ImGui::TextUnformatted(role.c_str());
+					ImGui::TextUnformatted(roles[bossIndex].c_str());
 					if (showColor) {
 						ImGui::PopStyleColor(1);
 					}
@@ -285,7 +295,11 @@ void TheTruth::drawBigUI(int currentWing) {
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Refresh")) {
-				sheetsAPI->clearCache();
+				if(!sheetsAPI->isDownloading()) sheetsAPI->clearCache();
+			}
+			if (sheetsAPI->isDownloading()) {
+				ImGui::SameLine();
+				ImGuiEx::Spinner("downloadingSpinner", ImGui::GetTextLineHeight() / 2.f, 3.f, ImGui::GetColorU32(ImGuiCol_Text));
 			}
 			vector<string> names = *(sheetsAPI->getNames());
 			if (ImGui::BeginTable("truthTable", names.size() + 1, ImGuiTableFlags_SizingStretchSame)) {
@@ -309,7 +323,7 @@ void TheTruth::drawBigUI(int currentWing) {
 	}
 }
 
-map<int, string> keycodes = {
+const map<int, string> keycodes = {
 	{VK_LBUTTON, "Mouse 1"},
 	{VK_RBUTTON, "Mouse 2"},
 	{VK_CANCEL, "CtrBrk"},
@@ -368,7 +382,7 @@ map<int, string> keycodes = {
 	// some browser keys, volume keys, media keys, oem keys
 };
 
-string getKeyName(int keycode) {
+const string getKeyName(const int keycode) {
 	if (('0' <= keycode && keycode <= '9') || 'A' <= keycode && keycode <= 'Z') {
 		return string(1,(char)keycode);
 	} else if (VK_NUMPAD0 <= keycode && keycode <= VK_NUMPAD9) {
@@ -376,7 +390,7 @@ string getKeyName(int keycode) {
 	} else if (VK_F1 <= keycode && keycode <= VK_F24) {
 		return string_format("F%d", keycode - VK_F1 + 1);
 	} else if (keycodes.count(keycode) > 0) {
-		return keycodes[keycode];
+		return keycodes.at(keycode);
 	} else {
 		return "?";
 	}
@@ -410,10 +424,9 @@ void TheTruth::drawSettingsUI() {
 				ImGui::Combo("weekday", &settings.weekday, weekdays, 7);
 			}
 			ImGui::Checkbox("colors in own roles", &settings.showBgColorInOwnRoles);
-			ImGui::Checkbox("lock own roles position", &settings.lockOwnRoleWindow);
-			ImGui::Checkbox("title bar in own roles", &settings.ownWindowShowTitle);
-			char name_c[char_buff_size];
-			strcpy_s(name_c, settings.ownName.c_str());
+			ImGui::Checkbox("fixate own roles position", &settings.lockOwnRoleWindow);
+			ImGui::Checkbox("show title bar in own roles", &settings.ownWindowShowTitle);
+			ImGui::Checkbox("show bosses in own roles", &settings.showHeaderInOwnRoles);
 			ImGui::Separator();
 			ImGui::Text("all roles");
 			const static char* allRoleDisplayModes[] = {
@@ -428,11 +441,13 @@ void TheTruth::drawSettingsUI() {
 			ImGui::InputScalar(allRolesKeyLbl.c_str(), ImGuiDataType_U8, (void*)&settings.windowToggleKey, NULL, NULL, "%d");
 			ImGui::Separator();
 			ImGui::Text("Google sheets settings, may only take effect after refresh");
-			char sheet_c[char_buff_size];
-			strcpy_s(sheet_c, settings.sheetId.c_str());
+			char name_c[char_buff_size];
+			strcpy_s(name_c, settings.ownName.c_str());
 			if (ImGui::InputText("own name", name_c, char_buff_size)) {
 				settings.ownName = string(name_c);
 			}
+			char sheet_c[char_buff_size];
+			strcpy_s(sheet_c, settings.sheetId.c_str());
 			if (ImGui::InputText("google sheet id", sheet_c, char_buff_size)) {
 				settings.sheetId = string(sheet_c);
 			}

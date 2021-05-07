@@ -118,6 +118,7 @@
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="SheetsAPI.cpp" />
     <ClCompile Include="TheTruth.cpp" />
+    <ClCompile Include="Widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api_key.h" />
@@ -134,6 +135,7 @@
     <ClInclude Include="Settings.h" />
     <ClInclude Include="SheetsAPI.h" />
     <ClInclude Include="TheTruth.h" />
+    <ClInclude Include="Widgets.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
