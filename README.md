@@ -53,6 +53,7 @@ Otherwise a google sheets api key is required place it into api_key.h like this:
 ```
 #define GOOGLE_API_KEY "1234567890-abc-defghijklmnopqrst"
 ```
+By default the binary will be xcopy-ed to `D:\Program Files\Guild Wars 2\addons\arcdps\` after a succesfull build. Disable/change that according to your gw2 path.
 
 ## LICENSE
 
