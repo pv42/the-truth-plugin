@@ -1,6 +1,6 @@
 # The Truth™ Plugin
 
-A Guild Wars 2
+A Guild Wars 2 arcdps plugin to display raid roles ingame. 
  
 ## Installation
 Make sure arcdps is installed. If arcdps is not installed, this plugin is simply not loaded and does nothing.  
