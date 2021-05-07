@@ -38,7 +38,7 @@ The id of the google sheet is the long cryptic string in the url for exaple for 
 If the DLL is not loaded (options do not show up), make sure, that you have installed the latest C++ 2015-2019 Redistributable.
 You can download the latest Redistributable from [Microsofts download page](https://support.microsoft.com/en-gb/help/2977003/the-latest-supported-visual-c-downloads).
 Please use the version "Visual Studio 2015, 2017 and 2019".  
-If you have problems, that your settings are reset on each startup, delete the file `<GW2>/addons/.json`. This will reset all your settings.
+If you have problems, that your settings are reset on each startup, delete the file `<GW2>/addons/thetruth-settings.json`. This will reset all your settings.
 
 ## Contact
 For any errors, feature requests and questions, simply open a new issue here or write pv42#6061 on discord.
