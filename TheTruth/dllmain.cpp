@@ -46,7 +46,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 }
 
 
-DLL_EXPORT void* get_init_addr(char* arcversionstr, ImGuiContext* imguicontext, void* id3dd9, HANDLE arcdll, void* mallocfn, void* freefn) {
+DLL_EXPORT void* get_init_addr(char* arcversionstr, ImGuiContext* imguicontext, void* id3dptr, HANDLE arcdll, void* mallocfn, void* freefn, uint32_t d3dversion) {
 	ImGui::SetCurrentContext((ImGuiContext*)imguicontext);
 	ImGui::SetAllocatorFunctions((void* (*)(size_t, void*))mallocfn, (void (*)(void*, void*))freefn); // on imgui 1.80+
 	TheTruth::theTruth = std::make_unique<TheTruth>(); // todo fix this

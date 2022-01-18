@@ -113,37 +113,32 @@ boolean isRaidMap(int mapId) {
 }
 
 void TheTruth::UIOptions() {
-	if (ImGui::BeginMenu("The Truth")) {
-		if(ImGui::Checkbox("Own roles", &showSmallUI)) {
-			if (showSmallUI) {
-				settings.showOwnRolesMode = OWN_ALWAYS;
-			} else {
-				settings.showOwnRolesMode = OWN_NEVER;
-			}
+	if(ImGui::Checkbox("Own roles", &showSmallUI)) {
+		if (showSmallUI) {
+			settings.showOwnRolesMode = OWN_ALWAYS;
+		} else {
+			settings.showOwnRolesMode = OWN_NEVER;
 		}
-		if (ImGui::Checkbox("All roles", &showBigUI)) {
-			int mapId = mumbleApi.getMapId();
-			if (showBigUI) {
-				if (mapId == AERODROME_MAP) {
-					settings.showAllRolesMode = ALL_AERODROME;
-				} else if (isRaidMap(mapId)) {
-					settings.showAllRolesMode = ALL_AERODROME_AND_RAIDS;
-				} else {
-					settings.showAllRolesMode = ALL_ALWAYS;
-				}
-			} else {
-				if (mapId == AERODROME_MAP) {
-					settings.showAllRolesMode = ALL_NEVER;
-				} else {
-					settings.showAllRolesMode = ALL_AERODROME;
-				}
-			}
-		}
-		ImGui::Checkbox("Setting##thetruthsettings", &showSetting);
-		ImGui::EndMenu();
 	}
-
-
+	if (ImGui::Checkbox("All roles", &showBigUI)) {
+		int mapId = mumbleApi.getMapId();
+		if (showBigUI) {
+			if (mapId == AERODROME_MAP) {
+				settings.showAllRolesMode = ALL_AERODROME;
+			} else if (isRaidMap(mapId)) {
+				settings.showAllRolesMode = ALL_AERODROME_AND_RAIDS;
+			} else {
+				settings.showAllRolesMode = ALL_ALWAYS;
+			}
+		} else {
+			if (mapId == AERODROME_MAP) {
+				settings.showAllRolesMode = ALL_NEVER;
+			} else {
+				settings.showAllRolesMode = ALL_AERODROME;
+			}
+		}
+	}
+	ImGui::Checkbox("Setting##thetruthsettings", &showSetting);
 }
 
 int getWingByMap(int mapId) {
@@ -244,7 +239,7 @@ void TheTruth::drawSmallUI(int wing, vector<string>& roles) {
 	}
 }
 
-void drawWing(int wing, shared_ptr<SheetsAPI> sheetsAPI, bool showColors) {
+void drawWing(int wing, shared_ptr<SheetsAPI> sheetsAPI, bool showColors, int numColumns) {
 	int rowCount = 0;
 	if (!sheetsAPI->hasWing(wing)) {
 		sheetsAPI->requestWing(wing);
@@ -257,9 +252,9 @@ void drawWing(int wing, shared_ptr<SheetsAPI> sheetsAPI, bool showColors) {
 		ImGui::TableNextRow();
 		ImGui::TableSetColumnIndex(0);
 		if (headers.size() > row) ImGui::TextUnformatted(headers[row].c_str());
-		for (int column = 0; column < roles.size(); column++) {
+		for (int column = 0; column < numColumns; column++) {
 			ImGui::TableSetColumnIndex(column + 1);
-			if (roles[column].size() > row) {
+			if (roles.size() > column  && roles[column].size() > row) {
 				string text = roles[column][row];
 				string mapKey = text;
 				transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
@@ -273,6 +268,8 @@ void drawWing(int wing, shared_ptr<SheetsAPI> sheetsAPI, bool showColors) {
 				if (showColor) {
 					ImGui::PopStyleColor(1);
 				}
+			} else {
+				ImGui::TextUnformatted("");
 			}
 		}
 	}
@@ -313,7 +310,7 @@ void TheTruth::drawBigUI(int currentWing) {
 					if (settings.showWings[wing - 1] || (currentWing == wing && settings.showCurrentWing)) {
 						if (!first) ImGui::Separator();
 						first = false;
-						drawWing(wing, sheetsAPI, settings.showBgColorInRolesTable);
+						drawWing(wing, sheetsAPI, settings.showBgColorInRolesTable, names.size());
 					}
 				}
 				ImGui::EndTable();
@@ -457,6 +454,7 @@ void TheTruth::drawSettingsUI() {
 				settings.namesRange = string(name_range_c);
 			}
 			ImGui::Separator();
+			ImGui::Checkbox("Flip rows and cols", &settings.flipRowsAndCols);
 			for (int wing = 1; wing <= 7; wing++) {
 				char range_c[char_buff_size];
 				strcpy_s(range_c, settings.getWingRolesRange(wing).c_str());

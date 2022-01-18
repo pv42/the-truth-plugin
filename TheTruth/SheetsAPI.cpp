@@ -82,22 +82,48 @@ vector<string> getValuesAs1DArray(const string& sheetId, const string& range, co
 	return v;
 }
 
-vector<vector<string>> getValuesAs2DArray(const string& sheetId, const string& range, const string api_key) {
+vector<vector<string>> getValuesAs2DArray(const string& sheetId, const string& range, const string api_key, const boolean flipRowsAndCols = false) {
 	vector<vector<string>> v;
 	unique_ptr<json> j = getSheetValuesJson(sheetId, range, api_key);
 	if (j == NULL) return v;
 	if (!j->contains("values") || !(*j)["values"].is_array()) {
 		return v;
 	}
-	for (auto& row : (*j)["values"]) {
-		if (!row.is_array()) {
-			continue;
+	if (flipRowsAndCols) {
+		int rowIndex = 0;
+		for (auto& row : (*j)["values"]) {
+			if (!row.is_array()) {
+				continue;
+			}
+			// ensure enought subvectors are present
+			while (v.size() < row.size()) {
+				vector<string> sub_vector;
+				for (int i = 0; i < rowIndex; i++) { // enusre enought elements in new sub vectors
+					sub_vector.push_back("");
+				}
+				v.push_back(sub_vector);
+			}
+			//vector<string> sub_vector;
+			for (int columIndex = 0; columIndex < v.size(); columIndex++) {
+				if(columIndex < row.size()) {
+					v[columIndex].push_back(row[columIndex]);
+				} else {
+					v[columIndex].push_back("");
+				}
+			}
+			rowIndex++;
 		}
-		vector<string> sub_vector;
-		for (auto& cell : row) {
-			sub_vector.push_back(cell);
+	} else {
+		for (auto& row : (*j)["values"]) { // 1 sub vertor per row
+			if (!row.is_array()) {
+				continue;
+			}
+			vector<string> sub_vector;
+			for (auto& cell : row) {
+				sub_vector.push_back(cell);
+			}
+			v.push_back(sub_vector);
 		}
-		v.push_back(sub_vector);
 	}
 	return v;
 }
@@ -142,7 +168,7 @@ void SheetsAPI::downloadWing(int wing) {
 			downloading = false;
 			return;
 		}
-		roles_cache[wing] = getValuesAs2DArray(settings.sheetId, escape_table_range(range), api_key);
+		roles_cache[wing] = getValuesAs2DArray(settings.sheetId, escape_table_range(range), api_key, settings.flipRowsAndCols);
 		string header_range = settings.getWingHeaderRange(wing);
 		if (header_range.empty()) {
 			downloading = false;

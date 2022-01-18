@@ -35,6 +35,7 @@ public:
 	bool ownWindowShowTitle;
 	bool lockOwnRoleWindow;
 	bool showHeaderInOwnRoles;
+	bool flipRowsAndCols;
 	int weekday;
 	bool showWings[7];
 	bool showCurrentWing;
