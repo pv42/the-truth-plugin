@@ -160,6 +160,26 @@ void SheetsAPI::downloadNames() {
 	}
 }
 
+void SheetsAPI::downloadMainRoles() {
+	if (settings.mainRolesRange.length() == 0) {
+		Logger::d("no main roles range");
+		main_roles_cache = std::make_shared<vector<string>>();
+	} else {
+		try {
+			Logger::d("downloading main roles");
+			string range = settings.mainRolesRange;
+			range = escape_table_range(range);
+			main_roles_cache = std::make_shared<vector<string>>(getValuesAs1DArray(settings.sheetId, range, api_key));
+			Logger::d(string_format("got %d main roles", main_roles_cache->size()));
+			Logger::d("downloaded main roles");
+			downloading = false;
+		} catch (std::exception e) {
+			Logger::e("failed to download names");
+			Logger::e(e.what());
+		}
+	}
+}
+
 void SheetsAPI::downloadWing(int wing) {
 	try {
 		Logger::d(string_format("downloading wing %d", wing));
@@ -274,10 +294,23 @@ void SheetsAPI::requestNames() {
 	}
 }
 
+void SheetsAPI::requestMainRoles() {
+	if (downloading) return;
+	if (main_roles_cache == NULL) {
+		Logger::d("getting names");
+		downloading = true;
+		if (downloadThread.joinable()) downloadThread.join();
+		downloadThread = thread(&SheetsAPI::downloadMainRoles, this);
+	}
+}
+
 void SheetsAPI::requestWing(int wing) {
 	if (downloading) return;
 	if (names_cache == NULL) {
 		requestNames();
+	}
+	if (main_roles_cache == NULL) {
+		requestMainRoles();
 	}
 	if (!downloading && !hasMetaData) {
 		Logger::d("getting meta data");
@@ -294,6 +327,7 @@ void SheetsAPI::requestWing(int wing) {
 }
 
 void SheetsAPI::clearCache() {
+	main_roles_cache = NULL;
 	roles_cache.clear();
 	colors_cache.clear();
 	hasMetaData = false;
@@ -320,6 +354,10 @@ vector<string> SheetsAPI::getHeader(int wing) {
 
 shared_ptr<vector<string>> SheetsAPI::getNames() {
 	return names_cache;
+}
+
+shared_ptr<vector<string>> SheetsAPI::getMainRoles() {
+	return main_roles_cache;
 }
 
 map<string, ImVec4> SheetsAPI::getColors() {

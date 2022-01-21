@@ -41,7 +41,9 @@ Settings::Settings() {
 		namesRange = "'The Truth'!A5:A14";
 		wingRolesRanges = vector<string>{ "", "", "'The Truth'!G22:I31", "'The Truth'!B22:E31", "'The Truth'!B5:E14", "'The Truth'!G5:I14", "'The Truth'!K5:M14"};
 		wingHeaderRanges = vector<string>{ "", "", "'The Truth'!G21:I21", "'The Truth'!B21:E21" ,"'The Truth'!B4:E4", "'The Truth'!G4:I4", "'The Truth'!K4:M4" };
-		windowToggleKey = 82; // r
+		windowToggleKey.keyCode = 82; // r
+		windowToggleKey.requireArcMod1 = true;
+		windowToggleKey.requireArcMod2 = true;
 	}
 }
 
@@ -56,6 +58,9 @@ void Settings::loadFromJson(json j) {
 	if (j.contains("showBgColorInOwnRoles") && j["showBgColorInOwnRoles"].is_boolean()) {
 		showBgColorInOwnRoles = j["showBgColorInOwnRoles"];
 	}
+	if (j.contains("useSheetsConditionalColors") && j["useSheetsConditionalColors"].is_boolean()) {
+		useSheetsConditionalColors = j["useSheetsConditionalColors"];
+	}
 	if (j.contains("sheetId") && j["sheetId"].is_string()) {
 		sheetId = j["sheetId"];
 	}
@@ -64,6 +69,9 @@ void Settings::loadFromJson(json j) {
 	}
 	if (j.contains("namesRange") && j["namesRange"].is_string()) {
 		namesRange = j["namesRange"];
+	}
+	if (j.contains("mainRolesRange") && j["mainRolesRange"].is_string()) {
+		mainRolesRange = j["mainRolesRange"];
 	}
 	if (j.contains("ownWindowShowTitle") && j["ownWindowShowTitle"].is_boolean()) {
 		ownWindowShowTitle = j["ownWindowShowTitle"];
@@ -90,7 +98,13 @@ void Settings::loadFromJson(json j) {
 		flipRowsAndCols = j["flipRowsAndCols"];
 	}
 	if (j.contains("windowToggleKey") && j["windowToggleKey"].is_number_integer()) {
-		windowToggleKey = j["windowToggleKey"];
+		windowToggleKey.keyCode = j["windowToggleKey"];
+	}
+	if (j.contains("windowToggleKeyMod1") && j["windowToggleKeyMod1"].is_boolean()) {
+		windowToggleKey.requireArcMod1 = j["windowToggleKeyMod1"];
+	}
+	if (j.contains("windowToggleKeyMod2") && j["windowToggleKeyMod2"].is_boolean()) {
+		windowToggleKey.requireArcMod2 = j["windowToggleKeyMod2"];
 	}
 	if (j.contains("showWings") && j["showWings"].is_array()) {
 		int count = j["showWings"].size();
@@ -134,6 +148,16 @@ void Settings::loadFromJson(json j) {
 	for (int i = headerCount; i < 7; i++) {
 		j["wingHeaderRanges"].push_back("");
 	}
+	if (j.contains("customColors") && j["customColors"].is_object()) {
+		for (auto& element : j["customColors"].items()) {
+			int r, g, b, a;
+			if (!element.value().is_string()) continue;
+			string value = element.value();
+			if (sscanf_s(value.c_str(), "#%02x%02x%02x%02x", &r, &g, &b, &a) < 4) continue;
+			ImColor color = ImColor(r, g, b, a);
+			customColors.push_back(pair(element.key(), color));
+		}
+	}
 }
 
 void Settings::save() const {
@@ -149,11 +173,23 @@ void Settings::save() const {
 	}
 }
 
+static inline float Saturate(float f) { return (f < 0.0f) ? 0.0f : (f > 1.0f) ? 1.0f : f; } // limits float to [0..1]
+
+void setColor(json& j, const string& key, const ImColor& color) {
+	j[key] = json();
+	int r = ((int)(Saturate(color.Value.x) * 255.0f + 0.5f));
+	int g = ((int)(Saturate(color.Value.y) * 255.0f + 0.5f));
+	int b = ((int)(Saturate(color.Value.z) * 255.0f + 0.5f));
+	int a = ((int)(Saturate(color.Value.w) * 255.0f + 0.5f));
+	j[key] = string_format("#%02x%02x%02x%02x", r, g, b, a);
+}
+
 json Settings::toJson() const {
 	json j;
 	j["version"] = 1;
 	j["showBgColorInRolesTable"] = showBgColorInRolesTable;
 	j["showBgColorInOwnRoles"] = showBgColorInOwnRoles;
+	j["useSheetsConditionalColors"] = useSheetsConditionalColors;
 	j["sheetId"] = sheetId;
 	j["ownName"] = ownName;
 	j["namesRange"] = namesRange;
@@ -164,12 +200,15 @@ json Settings::toJson() const {
 	j["showCurrentWing"] = showCurrentWing;
 	j["showAllRolesMode"] = showAllRolesMode;
 	j["flipRowsAndCols"] = flipRowsAndCols;
-	j["windowToggleKey"] = windowToggleKey;
+	j["windowToggleKey"] = windowToggleKey.keyCode;
+	j["windowToggleKeyMod1"] = windowToggleKey.requireArcMod1;
+	j["windowToggleKeyMod2"] = windowToggleKey.requireArcMod2;
 	j["showHeaderInOwnRoles"] = showHeaderInOwnRoles;
 	j["showWings"] = json::array();
 	for (int i = 0; i < 7; i++) {
 		j["showWings"][i] = showWings[i];
 	}
+	j["mainRolesRange"] = mainRolesRange;
 	j["wingRolesRanges"] = json::array();
 	for (string range : wingRolesRanges) {
 		j["wingRolesRanges"].push_back(range);
@@ -178,15 +217,19 @@ json Settings::toJson() const {
 	for (string range : wingHeaderRanges) {
 		j["wingHeaderRanges"].push_back(range);
 	}
+	j["customColors"] = json::object();
+	for (pair<string, ImColor> cc : customColors) {
+		setColor(j["customColors"], cc.first, cc.second);
+	}
 	return j;
 }
 
-string Settings::getWingRolesRange(int wing) {
+string Settings::getWingRolesRange(int wing) const {
 	if (wingRolesRanges.size() < wing) return "";
 	return wingRolesRanges[wing - 1];
 }
 
-string Settings::getWingHeaderRange(int wing) {
+string Settings::getWingHeaderRange(int wing) const {
 	if (wingHeaderRanges.size() < wing) return "";
 	return wingHeaderRanges[wing - 1];
 }

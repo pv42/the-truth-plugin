@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "api_key.h"
 #include "Widgets.h"
+#include "base64.h"
 
 
 std::unique_ptr<TheTruth> TheTruth::theTruth;
@@ -17,7 +18,7 @@ TheTruth::TheTruth() {
 	sheetsAPI = std::make_shared<SheetsAPI>(key, settings);
 	showSmallUI = true;
 	showBigUI = false;
-	showSetting = false;
+	showGoogleSheetSetup = false;
 }
 
 arcdps_exports* TheTruth::s_init() {
@@ -112,214 +113,6 @@ boolean isRaidMap(int mapId) {
 	return mapId == WING_1_MAP || mapId == WING_2_MAP || mapId == WING_3_MAP || mapId == WING_4_MAP || mapId == WING_5_MAP || mapId == WING_6_MAP || mapId == WING_7_MAP;
 }
 
-void TheTruth::UIOptions() {
-	if(ImGui::Checkbox("Own roles", &showSmallUI)) {
-		if (showSmallUI) {
-			settings.showOwnRolesMode = OWN_ALWAYS;
-		} else {
-			settings.showOwnRolesMode = OWN_NEVER;
-		}
-	}
-	if (ImGui::Checkbox("All roles", &showBigUI)) {
-		int mapId = mumbleApi.getMapId();
-		if (showBigUI) {
-			if (mapId == AERODROME_MAP) {
-				settings.showAllRolesMode = ALL_AERODROME;
-			} else if (isRaidMap(mapId)) {
-				settings.showAllRolesMode = ALL_AERODROME_AND_RAIDS;
-			} else {
-				settings.showAllRolesMode = ALL_ALWAYS;
-			}
-		} else {
-			if (mapId == AERODROME_MAP) {
-				settings.showAllRolesMode = ALL_NEVER;
-			} else {
-				settings.showAllRolesMode = ALL_AERODROME;
-			}
-		}
-	}
-	ImGui::Checkbox("Setting##thetruthsettings", &showSetting);
-}
-
-int getWingByMap(int mapId) {
-	switch (mapId)
-	{
-	case AERODROME_MAP:
-		return -1;
-	case WING_1_MAP:
-		return 1;
-	case WING_2_MAP:
-		return 2;
-	case WING_3_MAP:
-		return 3;
-	case WING_4_MAP:
-		return 4;
-	case WING_5_MAP:
-		return 5;
-	case WING_6_MAP:
-		return 6;
-	case WING_7_MAP:
-		return 7;
-	default:
-		return -1;
-	}
-}
-
-float getColorLightness(ImVec4& color) {
-	float max = color.x;
-	float min = color.x;
-	if (color.y > max) max = color.y;
-	if (color.y < min) min = color.y;
-	if (color.z > max) max = color.z;
-	if (color.z < min) min = color.z;
-	return (max + min) / 2.0f;
-}
-
-ImVec4 getTextColor(ImVec4& bgColor) {
-	ImVec4 textCol = ImVec4(ImGui::GetStyleColorVec4(ImGuiCol_Text));
-	if (getColorLightness(bgColor) >= 0.5f) { // determin if black or white text depending on the bg color			
-		textCol.x = 1.0f - textCol.x;
-		textCol.y = 1.0f - textCol.y;
-		textCol.z = 1.0f - textCol.z;
-	}
-	return textCol;
-}
-
-
-void TheTruth::drawSmallUI(int wing, vector<string>& roles) {
-	if(showSmallUI) {
-		if(settings.showHeaderInOwnRoles) {
-			ImGui::SetNextWindowSizeConstraints(ImVec2(100, 0), ImVec2(150, -1));
-		} else {
-			ImGui::SetNextWindowSizeConstraints(ImVec2(50,0), ImVec2(100, -1));
-		}
-		string title = string_format("Wing %d###CurrentWingRole", wing);
-		ImVec2 size(-1, ImGui::GetTextLineHeightWithSpacing() * (roles.size() + (settings.ownWindowShowTitle ? 1 : 0)) + (settings.ownWindowShowTitle ? 9 : 5));
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-		ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-		if (settings.lockOwnRoleWindow) {
-			flags |= ImGuiWindowFlags_NoInputs;
-		}
-		if (!settings.ownWindowShowTitle)
-			flags |= ImGuiWindowFlags_NoTitleBar;
-		if (ImGui::Begin(title.c_str(), &showSmallUI, flags)) {
-			if (!showSmallUI) { 
-				settings.showOwnRolesMode = OWN_NEVER; 
-			}
-			ImGui::SetWindowSize(size, 0); 
-			int index = 0;
-			if(ImGui::BeginTable("ownRolesTable", settings.showHeaderInOwnRoles ? 2 : 1, ImGuiTableFlags_NoPadOuterX)) {
-				map<string, ImVec4> colorMap = sheetsAPI->getColors();
-				vector<string> headers = sheetsAPI->getHeader(wing);
-				for (int bossIndex = 0; bossIndex < roles.size(); bossIndex ++) {
-					ImGui::TableNextRow();
-					ImGui::TableSetColumnIndex(0);
-					if (settings.showHeaderInOwnRoles) {
-						ImGui::TextUnformatted(headers.size() > bossIndex ? headers[bossIndex].c_str() :"");
-						ImGui::TableSetColumnIndex(1);
-					}
-					string mapKey = roles[bossIndex];
-					transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
-					bool showColor = (colorMap.count(mapKey) > 0) && settings.showBgColorInOwnRoles;
-					if (showColor) {
-						ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(colorMap[mapKey]));
-						ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(colorMap[mapKey]));
-					}
-					ImGui::TextUnformatted(roles[bossIndex].c_str());
-					if (showColor) {
-						ImGui::PopStyleColor(1);
-					}
-					index++;
-				}
-				ImGui::EndTable();
-			}
-		}
-		ImGui::End(); 
-		ImGui::PopStyleVar();
-	}
-}
-
-void drawWing(int wing, shared_ptr<SheetsAPI> sheetsAPI, bool showColors, int numColumns) {
-	int rowCount = 0;
-	if (!sheetsAPI->hasWing(wing)) {
-		sheetsAPI->requestWing(wing);
-		return;
-	}
-	vector<vector<string>> roles = sheetsAPI->getWing(wing); 
-	vector<string> headers = sheetsAPI->getHeader(wing);
-	if (roles.size() > 0) rowCount = roles[0].size();
-	for (int row = 0; row < rowCount; row++) {
-		ImGui::TableNextRow();
-		ImGui::TableSetColumnIndex(0);
-		if (headers.size() > row) ImGui::TextUnformatted(headers[row].c_str());
-		for (int column = 0; column < numColumns; column++) {
-			ImGui::TableSetColumnIndex(column + 1);
-			if (roles.size() > column  && roles[column].size() > row) {
-				string text = roles[column][row];
-				string mapKey = text;
-				transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
-				map<string, ImVec4 > colorMap = sheetsAPI->getColors();
-				bool showColor = (colorMap.count(mapKey) > 0) && showColors;
-				if (showColor) {
-					ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(colorMap[mapKey]));
-					ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(colorMap[mapKey]));
-				}
-				ImGui::TextUnformatted(text.c_str());
-				if (showColor) {
-					ImGui::PopStyleColor(1);
-				}
-			} else {
-				ImGui::TextUnformatted("");
-			}
-		}
-	}
-}
-
-void TheTruth::drawBigUI(int currentWing) {
-	if(showBigUI) {
-		if (ImGui::Begin("The Truth", &showBigUI, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav)) {
-			if (!showBigUI) {
-				if (mumbleApi.getMapId() == AERODROME_MAP) {
-					settings.showAllRolesMode = ALL_NEVER;
-				} else {
-					settings.showAllRolesMode = ALL_AERODROME;
-				}
-			}
-			ImGui::Checkbox("current wing", &settings.showCurrentWing);
-			for (int wing = 1; wing <= 7; wing++) {
-				ImGui::SameLine();
-				ImGui::Checkbox(string_format("wing %d", wing).c_str(), &settings.showWings[wing-1]);
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Refresh")) {
-				if(!sheetsAPI->isDownloading()) sheetsAPI->clearCache();
-			}
-			if (sheetsAPI->isDownloading()) {
-				ImGui::SameLine();
-				ImGuiEx::Spinner("downloadingSpinner", ImGui::GetTextLineHeight() / 2.f, 3.f, ImGui::GetColorU32(ImGuiCol_Text));
-			}
-			vector<string> names = *(sheetsAPI->getNames());
-			if (ImGui::BeginTable("truthTable", names.size() + 1, ImGuiTableFlags_SizingStretchSame)) {
-				ImGui::TableSetupColumn("Boss");
-				for (string& name : names) {
-					ImGui::TableSetupColumn(name.c_str());
-				}
-				ImGui::TableHeadersRow();
-				bool first = true;
-				for (int wing = 1; wing <= 7; wing++) {
-					if (settings.showWings[wing - 1] || (currentWing == wing && settings.showCurrentWing)) {
-						if (!first) ImGui::Separator();
-						first = false;
-						drawWing(wing, sheetsAPI, settings.showBgColorInRolesTable, names.size());
-					}
-				}
-				ImGui::EndTable();
-			}
-		}
-		ImGui::End();
-	}
-}
-
 const map<int, string> keycodes = {
 	{VK_LBUTTON, "Mouse 1"},
 	{VK_RBUTTON, "Mouse 2"},
@@ -380,8 +173,10 @@ const map<int, string> keycodes = {
 };
 
 const string getKeyName(const int keycode) {
-	if (('0' <= keycode && keycode <= '9') || 'A' <= keycode && keycode <= 'Z') {
-		return string(1,(char)keycode);
+	if (keycode == 0) {
+		return "None";
+	} else if (('0' <= keycode && keycode <= '9') || 'A' <= keycode && keycode <= 'Z') {
+		return string(1, (char)keycode);
 	} else if (VK_NUMPAD0 <= keycode && keycode <= VK_NUMPAD9) {
 		return string_format("Numpad%d", keycode - VK_NUMPAD0);
 	} else if (VK_F1 <= keycode && keycode <= VK_F24) {
@@ -389,60 +184,446 @@ const string getKeyName(const int keycode) {
 	} else if (keycodes.count(keycode) > 0) {
 		return keycodes.at(keycode);
 	} else {
-		return "?";
+		return string_format("<%d>", keycode);
 	}
 }
 
+void TheTruth::InputKey(const char* label, Key* key, arc_config& cf) {
+	char nameBuff[96];
+	if (currentInputKeyLabel != 0 && strcmp(label, currentInputKeyLabel) == 0) {
+		sprintf_s(nameBuff, "> <###bt_ik_%s", label);
+		if (ImGui::Button(nameBuff, ImVec2(80, 0))) {
+			currentInputKeyLabel = 0;
+			currentInputKeyTarget = 0;
+		}
+	} else {
+		sprintf_s(nameBuff, "%s###bt_ik_%s", getKeyName(key->keyCode).c_str(), label);
+		if (ImGui::Button(nameBuff, ImVec2(80, 0))) {
+			currentInputKeyLabel = label;
+			currentInputKeyTarget = &(key->keyCode);
+		}
+	}
+	ImGui::SameLine();
+	sprintf_s(nameBuff, "%s##cbam1_%s", getKeyName(cf.mod1Key).c_str(), label);
+	ImGui::Checkbox(nameBuff, &(key->requireArcMod1));
+	ImGui::SameLine();
+	sprintf_s(nameBuff, "%s##cbam2_%s", getKeyName(cf.mod2Key).c_str(), label);
+	ImGui::Checkbox(nameBuff, &(key->requireArcMod2));
+	ImGui::SameLine();
+	ImGui::Dummy(ImVec2(25,0));
+	ImGui::SameLine();
+	ImGui::Text(label);
+}
+
+
+void TheTruth::UIOptions() {
+	arc_config arc_cfg = readArcConfig();
+	if(ImGui::Checkbox("Own roles", &showSmallUI)) {
+		if (showSmallUI) {
+			settings.showOwnRolesMode = OWN_ALWAYS;
+		} else {
+			settings.showOwnRolesMode = OWN_NEVER;
+		}
+	}
+	if (ImGui::Checkbox("All roles", &showBigUI)) {
+		int mapId = mumbleApi.getMapId();
+		if (showBigUI) {
+			if (mapId == AERODROME_MAP) {
+				settings.showAllRolesMode = ALL_AERODROME;
+			} else if (isRaidMap(mapId)) {
+				settings.showAllRolesMode = ALL_AERODROME_AND_RAIDS;
+			} else {
+				settings.showAllRolesMode = ALL_ALWAYS;
+			}
+		} else {
+			if (mapId == AERODROME_MAP) {
+				settings.showAllRolesMode = ALL_NEVER;
+			} else {
+				settings.showAllRolesMode = ALL_AERODROME;
+			}
+		}
+	}
+	ImGui::Separator();
+	ImGui::Text("own roles, only displayed in a raid");
+	const static char* ownRoleDisplayModes[] = {
+		"Always",
+		"Timed",
+		"Never"
+	};
+	ImGui::Combo("show own roles", (int*)&settings.showOwnRolesMode, ownRoleDisplayModes, 3);
+	if (settings.showOwnRolesMode == OWN_TIMED) {
+		//char start_time[char_buff_size];
+		//char end_time[char_buff_size];
+		//ImGui::InputText("start time", start_time, char_buff_size);
+		//ImGui::InputText("end time", end_time, char_buff_size);
+		const static char* weekdays[] = {
+			"Monday",
+			"Tuesday",
+			"Wednesday",
+			"Thursday",
+			"Friday",
+			"Saturday",
+			"Sunday"
+		};
+		ImGui::Combo("weekday", &settings.weekday, weekdays, 7);
+	}
+	ImGui::Checkbox("fixate own roles position", &settings.lockOwnRoleWindow);
+	ImGui::Checkbox("show title bar in own roles", &settings.ownWindowShowTitle);
+	ImGui::Checkbox("show bosses in own roles", &settings.showHeaderInOwnRoles);
+	ImGui::Separator();
+	ImGui::Text("all roles");
+	const static char* allRoleDisplayModes[] = {
+		"Always",
+		"Aerodrome",
+		"Aerodrome and Raids",
+		"Never"
+	};
+	ImGui::Combo("show in maps", (int*)&settings.showAllRolesMode, allRoleDisplayModes, 4);
+	InputKey("all roles toggle key", &settings.windowToggleKey, arc_cfg);
+	ImGui::Separator();
+	ImGui::Text("Colors");
+	ImGui::Checkbox("colors in own roles", &settings.showBgColorInOwnRoles);
+	ImGui::Checkbox("colors in all roles", &settings.showBgColorInRolesTable);
+	ImGui::Checkbox("use conditional formation colors", &settings.useSheetsConditionalColors);
+	if (ImGui::Button("custom colors###tt_cst_color_btn")) {
+		showCustomColorSetup = true;
+	}
+	ImGui::Separator();
+	const int char_buff_size = 128;
+	char name_c[char_buff_size];
+	strcpy_s(name_c, settings.ownName.c_str());
+	if (ImGui::InputText("own name", name_c, char_buff_size)) {
+		settings.ownName = string(name_c);
+	}
+	if (ImGui::Button("Google sheet setup##thetruthgooglesheetsettings")) {
+		showGoogleSheetSetup = true;
+	}
+}
+
+int getWingByMap(int mapId) {
+	switch (mapId)
+	{
+	case AERODROME_MAP:
+		return -1;
+	case WING_1_MAP:
+		return 1;
+	case WING_2_MAP:
+		return 2;
+	case WING_3_MAP:
+		return 3;
+	case WING_4_MAP:
+		return 4;
+	case WING_5_MAP:
+		return 5;
+	case WING_6_MAP:
+		return 6;
+	case WING_7_MAP:
+		return 7;
+	default:
+		return -1;
+	}
+}
+
+float getColorLightness(const ImVec4& color) {
+	float max = color.x;
+	float min = color.x;
+	if (color.y > max) max = color.y;
+	if (color.y < min) min = color.y;
+	if (color.z > max) max = color.z;
+	if (color.z < min) min = color.z;
+	return (max + min) / 2.0f;
+}
+
+ImVec4 getTextColor(const ImVec4& bgColor) {
+	ImVec4 textCol = ImVec4(ImGui::GetStyleColorVec4(ImGuiCol_Text));
+	if (getColorLightness(bgColor) >= 0.5f) { // determin if black or white text depending on the bg color			
+		textCol.x = 1.0f - textCol.x;
+		textCol.y = 1.0f - textCol.y;
+		textCol.z = 1.0f - textCol.z;
+	}
+	return textCol;
+}
+
+map<string, ImVec4> getColorMap(const shared_ptr<SheetsAPI> api, const Settings& settings) {
+	map<string, ImVec4> colorMap;
+	if (settings.useSheetsConditionalColors) {
+		colorMap = api->getColors();
+	}
+	for (pair<string, ImColor> cc : settings.customColors) {
+		string key = cc.first;
+		transform(key.begin(), key.end(), key.begin(), ::tolower);
+		colorMap[key] = cc.second.Value;
+	}
+	return colorMap;
+}
+
+void TheTruth::drawSmallUI(int wing, vector<string>& roles, map<string, ImVec4> colorMap, const string& mainRole,  const shared_ptr<ImVec4> mainRoleColor) {
+	if(showSmallUI) {
+		if(settings.showHeaderInOwnRoles) {
+			ImGui::SetNextWindowSizeConstraints(ImVec2(100, 0), ImVec2(150, -1));
+		} else {
+			ImGui::SetNextWindowSizeConstraints(ImVec2(50,0), ImVec2(100, -1));
+		}
+		string title = string_format("Wing %d###CurrentWingRole", wing);
+		ImVec2 size(-1, ImGui::GetTextLineHeightWithSpacing() * (roles.size() + (settings.ownWindowShowTitle ? 1 : 0)) + (settings.ownWindowShowTitle ? 9 : 5));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+		if (settings.lockOwnRoleWindow) {
+			flags |= ImGuiWindowFlags_NoInputs;
+		}
+		if (!settings.ownWindowShowTitle)
+			flags |= ImGuiWindowFlags_NoTitleBar;
+		if (ImGui::Begin(title.c_str(), &showSmallUI, flags)) {
+			if (!showSmallUI) { 
+				settings.showOwnRolesMode = OWN_NEVER; 
+			}
+			ImGui::SetWindowSize(size, 0); 
+			int index = 0;
+			if(ImGui::BeginTable("ownRolesTable", settings.showHeaderInOwnRoles ? 2 : 1, ImGuiTableFlags_NoPadOuterX)) {
+				vector<string> headers = sheetsAPI->getHeader(wing);
+				for (int bossIndex = 0; bossIndex < roles.size(); bossIndex ++) {
+					ImGui::TableNextRow();
+					ImGui::TableSetColumnIndex(0);
+					if (settings.showHeaderInOwnRoles) {
+						ImGui::TextUnformatted(headers.size() > bossIndex ? headers[bossIndex].c_str() :"");
+						ImGui::TableSetColumnIndex(1);
+					}
+					string mapKey = roles[bossIndex];
+					transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
+					bool showColor = settings.showBgColorInOwnRoles && ((colorMap.count(mapKey) > 0) || mainRoleColor != NULL);
+					if (showColor) {
+						if (colorMap.count(mapKey) > 0) {
+							ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(colorMap[mapKey]));
+							ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(colorMap[mapKey]));
+						} else {
+							ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(*mainRoleColor));
+							ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(*mainRoleColor));
+						}
+					}
+					string role = roles[bossIndex];
+					if (role == string()) {
+						role = mainRole;
+					}
+					ImGui::TextUnformatted(role.c_str());
+					if (showColor) {
+						ImGui::PopStyleColor(1);
+					}
+					index++;
+				}
+				ImGui::EndTable();
+			}
+		}
+		ImGui::End(); 
+		ImGui::PopStyleVar();
+	}
+}
+
+
+void drawWing(int wing, shared_ptr<SheetsAPI> sheetsAPI, const Settings& settings, int numColumns, const map<string, ImVec4>& colorMap, const map<int, ImVec4>& mainRoleColors) {
+	int rowCount = 0;
+	if (!sheetsAPI->hasWing(wing)) {
+		sheetsAPI->requestWing(wing);
+		return;
+	}
+	vector<vector<string>> roles = sheetsAPI->getWing(wing); 
+	vector<string> headers = sheetsAPI->getHeader(wing);
+	if (roles.size() > 0) rowCount = roles[0].size();
+	for (int row = 0; row < rowCount; row++) {
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+		if (headers.size() > row) ImGui::TextUnformatted(headers[row].c_str());
+		for (int column = 0; column < numColumns; column++) {
+			ImGui::TableSetColumnIndex(column + 1);
+			if (roles.size() > column  && roles[column].size() > row) {
+				string text = roles[column][row];
+				string mapKey = text;
+				transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
+				bool showColor = settings.showBgColorInRolesTable && ((colorMap.count(mapKey) > 0) || (mainRoleColors.count(column) > 0));
+				if (showColor) {
+					if (colorMap.count(mapKey) > 0) {
+						ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(colorMap.at(mapKey)));
+						ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(colorMap.at(mapKey)));
+					} else {
+						ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(mainRoleColors.at(column)));
+						ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(mainRoleColors.at(column)));
+					}
+				}
+				ImGui::TextUnformatted(text.c_str());
+				if (showColor) {
+					ImGui::PopStyleColor(1);
+				}
+			} else {
+				bool showColor = settings.showBgColorInRolesTable && (mainRoleColors.count(column) > 0);
+				if (showColor) {
+					ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(mainRoleColors.at(column)));
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(mainRoleColors.at(column)));
+				}
+				ImGui::TextUnformatted("");
+				if (showColor) {
+					ImGui::PopStyleColor(1);
+				}
+			}
+		}
+	}
+}
+
+void TheTruth::drawBigUI(int currentWing) {
+	if(showBigUI) {
+		if (ImGui::Begin("The Truth", &showBigUI, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav)) {
+			if (!showBigUI) {
+				if (mumbleApi.getMapId() == AERODROME_MAP) {
+					settings.showAllRolesMode = ALL_NEVER;
+				} else {
+					settings.showAllRolesMode = ALL_AERODROME;
+				}
+			}
+			ImGui::Checkbox("current wing", &settings.showCurrentWing);
+			for (int wing = 1; wing <= 7; wing++) {
+				ImGui::SameLine();
+				ImGui::Checkbox(string_format("wing %d", wing).c_str(), &settings.showWings[wing-1]);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Refresh")) {
+				if(!sheetsAPI->isDownloading()) sheetsAPI->clearCache();
+			}
+			if (sheetsAPI->isDownloading()) {
+				ImGui::SameLine();
+				ImGuiEx::Spinner("downloadingSpinner", ImGui::GetTextLineHeight() / 2.f, 3.f, ImGui::GetColorU32(ImGuiCol_Text));
+			}
+			vector<string> names = *(sheetsAPI->getNames());
+			map<string, ImVec4> colorMap = getColorMap(sheetsAPI, settings);
+			if (ImGui::BeginTable("truthTable", names.size() + 1, ImGuiTableFlags_SizingStretchSame)) {
+				ImGui::TableSetupColumn("Boss");
+				for (string& name : names) {
+					ImGui::TableSetupColumn(name.c_str());
+				}
+				ImGui::TableHeadersRow();
+				bool first = true;
+				shared_ptr<vector<string>> mainRoles = sheetsAPI->getMainRoles();
+				map<int, ImVec4> mainRoleColors;
+				if (mainRoles != NULL && mainRoles->size() > 0) {
+					first = false;
+					ImGui::TableNextRow();
+					ImGui::TableSetColumnIndex(0);
+					ImGui::TextUnformatted("Main Role");
+					
+					for (int column = 0; column < names.size(); column++) {
+						ImGui::TableSetColumnIndex(column + 1);
+						if (mainRoles->size() > column) {
+							string text = (*mainRoles)[column];
+							string mapKey = text;
+							transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
+							bool showColor = settings.showBgColorInRolesTable && (colorMap.count(mapKey) > 0);
+							if (showColor) {
+								mainRoleColors[column] = colorMap[mapKey];
+								ImGui::PushStyleColor(ImGuiCol_Text, getTextColor(colorMap[mapKey]));
+								ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(colorMap[mapKey]));
+							}
+							ImGui::TextUnformatted(text.c_str());
+							if (showColor) {
+								ImGui::PopStyleColor(1);
+							}
+						} else {
+							ImGui::TextUnformatted("");
+						}
+					}
+				}
+				for (int wing = 1; wing <= 7; wing++) {
+					if (settings.showWings[wing - 1] || (currentWing == wing && settings.showCurrentWing)) {
+						if (!first) ImGui::Separator();
+						first = false;
+						drawWing(wing, sheetsAPI, settings, names.size(), colorMap, mainRoleColors);
+					}
+				}
+				ImGui::EndTable();
+			}
+		}
+		ImGui::End();
+	}
+}
+
+void writeTextToClipboard(const string& text) {
+	const size_t len = text.length() + 1;
+	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
+	memcpy_s(GlobalLock(hMem), len, text.c_str(), len);
+	GlobalUnlock(hMem);
+	OpenClipboard(0);
+	EmptyClipboard();
+	SetClipboardData(CF_TEXT, hMem);
+	CloseClipboard();
+}
+
+string get_export_string(const Settings& settings) {
+	string data = "";
+	data += (char)(settings.flipRowsAndCols ? 1 : 0);
+	data += settings.sheetId;
+	data += '\0';
+	data += settings.namesRange;
+	data += '\0';
+	data += settings.mainRolesRange;
+	data += '\0';
+	for (int i = 0; i < 7; i++) {
+		data += settings.getWingHeaderRange(i + 1);
+		data += '\0';
+		data += settings.getWingRolesRange(i + 1);
+		data += '\0';
+	}
+	return base64encode((void*)data.c_str(), data.length());
+}
+
+string getStringByteVector(const vector<char> v, int* pos) {
+	string ret = "";
+	while (*pos < v.size()) {
+		if (v[*pos] == 0) {
+			(*pos)++;
+			break;
+		}
+		ret += (char)v[*pos];
+		(*pos)++;
+	}
+	return ret;
+}
+
+static void import_sheets_string(const string importStr, Settings* settings) {
+	vector<char> data = base64decode(importStr);
+	bool flip = (data[0] != 0);
+	int pos = 1;
+	string sheetId = getStringByteVector(data, &pos);
+	if (sheetId.size() > 90) { 
+		Logger::w("Importing sheet settings failed.");
+		return;
+	}
+	settings->flipRowsAndCols = flip;
+	settings->sheetId = sheetId;
+	settings->namesRange = getStringByteVector(data, &pos);
+	settings->mainRolesRange = getStringByteVector(data, &pos);
+	for (int i = 0; i < 7; i++) {
+		settings->setWingHeaderRange(i + 1, getStringByteVector(data, &pos));
+		settings->setWingRolesRange(i + 1, getStringByteVector(data, &pos));
+	}
+}
+
+const int import_str_size = 2048;
+char import_c[import_str_size] = "";
+
 void TheTruth::drawSettingsUI() {
-	if (showSetting) {
-		const int char_buff_size = 128;
-		if (ImGui::Begin("The Truth Settings", &showSetting, ImGuiWindowFlags_NoCollapse)) {
-			ImGui::Text("own roles, only displayed in a raid");
-			const static char* ownRoleDisplayModes[] = {
-				"Always",
-				"Timed",
-				"Never"
-			};
-			ImGui::Combo("show own roles", (int*)&settings.showOwnRolesMode, ownRoleDisplayModes, 3);
-			if (settings.showOwnRolesMode == OWN_TIMED) {
-				//char start_time[char_buff_size];
-				//char end_time[char_buff_size];
-				//ImGui::InputText("start time", start_time, char_buff_size);
-				//ImGui::InputText("end time", end_time, char_buff_size);
-				const static char* weekdays[] = {
-					"Monday",
-					"Tuesday",
-					"Wednesday",
-					"Thursday",
-					"Friday",
-					"Saturday",
-					"Sunday"
-				};
-				ImGui::Combo("weekday", &settings.weekday, weekdays, 7);
-			}
-			ImGui::Checkbox("colors in own roles", &settings.showBgColorInOwnRoles);
-			ImGui::Checkbox("fixate own roles position", &settings.lockOwnRoleWindow);
-			ImGui::Checkbox("show title bar in own roles", &settings.ownWindowShowTitle);
-			ImGui::Checkbox("show bosses in own roles", &settings.showHeaderInOwnRoles);
-			ImGui::Separator();
-			ImGui::Text("all roles");
-			const static char* allRoleDisplayModes[] = {
-				"Always",
-				"Aerodrome",
-				"Aerodrome and Raids",
-				"Never"
-			};
-			ImGui::Combo("show in maps", (int*)&settings.showAllRolesMode, allRoleDisplayModes, 4);
-			ImGui::Checkbox("colors in all roles", &settings.showBgColorInRolesTable);
-			string allRolesKeyLbl = string_format("all roles hide/show key - %s####all_roles_key", getKeyName(settings.windowToggleKey));
-			ImGui::InputScalar(allRolesKeyLbl.c_str(), ImGuiDataType_U8, (void*)&settings.windowToggleKey, NULL, NULL, "%d");
-			ImGui::Separator();
+	const int char_buff_size = 2048;
+	if (showGoogleSheetSetup) {
+		if (ImGui::Begin("Google sheets setup", &showGoogleSheetSetup, ImGuiWindowFlags_NoCollapse)) {
 			ImGui::Text("Google sheets settings, may only take effect after refresh");
-			char name_c[char_buff_size];
-			strcpy_s(name_c, settings.ownName.c_str());
-			if (ImGui::InputText("own name", name_c, char_buff_size)) {
-				settings.ownName = string(name_c);
+			// import/export
+			if (ImGui::Button("export to clipboard")) {
+				writeTextToClipboard(get_export_string(settings));
 			}
+			ImGui::InputText("###import_sheet_txt", import_c, import_str_size);
+			ImGui::SameLine();
+			if (ImGui::Button("import settings")) {
+				string import_s = string(import_c);
+				if (import_s.length() > 0) {
+					import_sheets_string(import_s, &settings);
+				}
+			}
+			ImGui::Separator();
 			char sheet_c[char_buff_size];
 			strcpy_s(sheet_c, settings.sheetId.c_str());
 			if (ImGui::InputText("google sheet id", sheet_c, char_buff_size)) {
@@ -453,8 +634,14 @@ void TheTruth::drawSettingsUI() {
 			if (ImGui::InputText("names range", name_range_c, char_buff_size)) {
 				settings.namesRange = string(name_range_c);
 			}
+
 			ImGui::Separator();
 			ImGui::Checkbox("Flip rows and cols", &settings.flipRowsAndCols);
+			char mainr_range_c[char_buff_size];
+			strcpy_s(mainr_range_c, settings.mainRolesRange.c_str());
+			if (ImGui::InputText("main roles range", mainr_range_c, char_buff_size)) {
+				settings.mainRolesRange = string(mainr_range_c);
+			}
 			for (int wing = 1; wing <= 7; wing++) {
 				char range_c[char_buff_size];
 				strcpy_s(range_c, settings.getWingRolesRange(wing).c_str());
@@ -469,6 +656,41 @@ void TheTruth::drawSettingsUI() {
 				if (ImGui::InputText(string_format("wing %d header range", wing).c_str(), range_c, char_buff_size)) {
 					settings.setWingHeaderRange(wing, string(range_c));
 				}
+			}
+		}
+		ImGui::End();
+	}
+	if (showCustomColorSetup) {
+		if (ImGui::Begin("Custom colors", &showCustomColorSetup, ImGuiWindowFlags_NoCollapse)) {
+			int deletionIndex = -1;
+			for (int i = 0; i < settings.customColors.size(); i++) {
+				ImGui::PushID(i);
+				if (ImGui::Button("x###tt_cst_col_delbtn")) {
+					deletionIndex = i;
+				}
+				ImGui::SameLine();
+				float colorBuf[4];
+				colorBuf[0] = settings.customColors[i].second.Value.x;
+				colorBuf[1] = settings.customColors[i].second.Value.y;
+				colorBuf[2] = settings.customColors[i].second.Value.z;
+				colorBuf[3] = settings.customColors[i].second.Value.w;
+				if (ImGui::ColorEdit4("###tt_cst_col_c4", colorBuf, ImGuiColorEditFlags_NoInputs)) {
+					settings.customColors[i].second = ImColor(colorBuf[0], colorBuf[1], colorBuf[2], colorBuf[3]);
+				}
+				ImGui::SameLine();
+				char buff[char_buff_size];
+				strcpy_s(buff, settings.customColors[i].first.c_str());
+				if (ImGui::InputText("###tt_cst_col_txt", buff, char_buff_size)) {
+					settings.customColors[i].first = buff;
+				}
+
+				ImGui::PopID();
+			}
+			if (deletionIndex >= 0) {
+				settings.customColors.erase(settings.customColors.begin() + deletionIndex);
+			}
+			if (ImGui::Button("  +  ###tt_cst_col_addbtn")) {
+				settings.customColors.push_back(pair<string, ImColor>("Tank", ImColor(0.5f, 0.5f, 0.5f)));
 			}
 		}
 		ImGui::End();
@@ -513,7 +735,18 @@ void TheTruth::ImGui(uint32_t not_charsel_or_loading) {
 					vector<vector<string>> wing_roles = sheetsAPI->getWing(currentWing);
 					if (wing_roles.size() > ownNameIndex) {
 						showSmallUI = settings.showOwnRolesMode == OWN_ALWAYS || (settings.showOwnRolesMode == OWN_TIMED && checkTimeCondition(settings.weekday));
-						drawSmallUI(currentWing, wing_roles[ownNameIndex]);
+						shared_ptr<ImVec4> mainRoleColor = NULL;
+						map<string, ImVec4> colorMap = getColorMap(sheetsAPI, settings);
+						string ownMainRole = "";
+						if (sheetsAPI->getMainRoles() != NULL && sheetsAPI->getMainRoles()->size() > ownNameIndex) {
+							ownMainRole = (*sheetsAPI->getMainRoles())[ownNameIndex];
+							string roleKey = ownMainRole;
+							transform(roleKey.begin(), roleKey.end(), roleKey.begin(), ::tolower);
+							if (colorMap.count(roleKey) > 0) {
+								mainRoleColor = std::make_shared<ImVec4>(colorMap[roleKey]);
+							}
+						}
+						drawSmallUI(currentWing, wing_roles[ownNameIndex], colorMap, ownMainRole, mainRoleColor);
 					} else {
 						Logger::i(string_format("wing roles size is %d but index is %d", wing_roles.size(), ownNameIndex));
 					}
@@ -535,21 +768,44 @@ void TheTruth::ImGui(uint32_t not_charsel_or_loading) {
 }
 
 uintptr_t TheTruth::WindowNFCallback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	arc_config cf = readArcConfig();
+	uint16_t arc_global_mod1 = cf.mod1Key;
+	uint16_t arc_global_mod2 = cf.mod2Key;
+	auto const io = &ImGui::GetIO();
 	const int vkey = (int)wParam;
 	switch (uMsg) {
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
-		//io->KeysDown[vkey] = false;
-		if (vkey == VK_MENU) {
-			io_altDown = false;
+		io->KeysDown[vkey] = false;
+		if (vkey == VK_CONTROL) {
+			io->KeyCtrl = false;
+		} else if (vkey == VK_MENU) {
+			io->KeyAlt = false;
 		} else if (vkey == VK_SHIFT) {
-			io_shiftDown = false;
+			io->KeyShift = false;
 		}
+		break;
 		break;
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
-		// toggle killproof window
-		if (io_altDown && io_shiftDown && vkey == settings.windowToggleKey) {
+		if (vkey == VK_CONTROL) {
+			io->KeyCtrl = true;
+		} else if (vkey == VK_MENU) {
+			io->KeyAlt = true;
+		} else if (vkey == VK_SHIFT) {
+			io->KeyShift = true;
+		}
+		io->KeysDown[vkey] = true;
+		if (currentInputKeyLabel != NULL) {
+			if (vkey == VK_ESCAPE) {
+				*currentInputKeyTarget = 0;
+			} else {
+				*currentInputKeyTarget = vkey;
+			}
+			currentInputKeyLabel = NULL;
+			return 0;
+		}
+		if (vkey == settings.windowToggleKey.keyCode && (!settings.windowToggleKey.requireArcMod1 || io->KeysDown[arc_global_mod1]) && (!settings.windowToggleKey.requireArcMod2 || io->KeysDown[arc_global_mod2])) {
 			int mapId = mumbleApi.getMapId();
 			if (!showBigUI) {
 				if (mapId == AERODROME_MAP) {
@@ -566,18 +822,12 @@ uintptr_t TheTruth::WindowNFCallback(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 					settings.showAllRolesMode = ALL_AERODROME;
 				}
 			}
-			return 0;
-		}
-		if (vkey == VK_MENU) {
-			io_altDown = true;
-		} else if (vkey == VK_SHIFT) {
-			io_shiftDown = true;
 		}
 		break;
 	case WM_ACTIVATEAPP:
 		if (!wParam) {
-			io_shiftDown = false;
-			io_altDown = false;
+			io->KeysDown[arc_global_mod1] = false;
+			io->KeysDown[arc_global_mod2] = false;
 		}
 		break;
 	default:

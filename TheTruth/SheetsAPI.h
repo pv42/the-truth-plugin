@@ -21,14 +21,17 @@ public:
 	~SheetsAPI();
 	SheetsAPI(const string api_key, Settings& setttings);
 	void downloadNames();
+	void downloadMainRoles();
 	void downloadWing(int wing);
 	void downloadSheetMetaData();
 	bool hasWing(int wing);
 	void requestWing(int wing);
 	void requestNames();
+	void requestMainRoles();
 	vector<vector<string>> getWing(int wing);
 	vector<string> getHeader(int wing);
 	shared_ptr<vector<string>> getNames();
+	shared_ptr<vector<string>> getMainRoles();
 	map<string, ImVec4> getColors();
 	void clearCache();
 	bool isDownloading();
@@ -39,6 +42,7 @@ private:
 	string api_key;
 	map<int, vector<vector<string>>> roles_cache;
 	shared_ptr<vector<string>> names_cache;
+	shared_ptr<vector<string>> main_roles_cache;
 	map<int, vector<string>> header_cache;
 	map<string, ImVec4> colors_cache;
 	thread downloadThread;

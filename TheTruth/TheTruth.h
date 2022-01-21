@@ -22,16 +22,19 @@ public:
 private:
 	void drawSettingsUI();
 	void drawBigUI(int currentWing);
-	void drawSmallUI(int wing, vector<string>& roles);
+	void drawSmallUI(int wing, vector<string>& roles, map<string, ImVec4> colorMap, const string& mainRole, shared_ptr<ImVec4> mainRoleColor);
 	MumbleApi mumbleApi;
 	shared_ptr<SheetsAPI> sheetsAPI;
 	Settings settings;
 	arcdps_exports arc_exports;
-	bool showSetting;
+	bool showGoogleSheetSetup;
+	bool showCustomColorSetup;
 	bool showBigUI;
 	bool showSmallUI;
-	bool io_shiftDown;
-	bool io_altDown;
 	static bool crashed; // if an uncaught exception is encountered at top level try to disable this plugin at top level
+	// keyIn
+	void InputKey(const char* label, Key* key, arc_config& cf);
+	const char* currentInputKeyLabel;
+	int* currentInputKeyTarget;
 };
 

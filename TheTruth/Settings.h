@@ -2,10 +2,12 @@
 #include <string>
 #include <vector>
 #include "json.hpp"
+#include "imgui/imgui.h"
 
 using nlohmann::json;
 using std::string;
 using std::vector;
+using std::pair;
 
 enum ShowOwnRolesMode {
 	OWN_ALWAYS = 0,
@@ -20,18 +22,26 @@ enum ShowAllRolesMode {
 	ALL_NEVER = 3
 };
 
+typedef struct {
+	int keyCode;
+	bool requireArcMod1;
+	bool requireArcMod2;
+} Key;
+
 class Settings {
 public:
 	Settings();
 	string sheetId;
 	string ownName;
 	string namesRange;
-	string getWingRolesRange(int wing);
-	string getWingHeaderRange(int wing);
+	string mainRolesRange;
+	string getWingRolesRange(int wing) const;
+	string getWingHeaderRange(int wing) const;
 	void setWingRolesRange(int wing, string range);
 	void setWingHeaderRange(int wing, string range);
 	bool showBgColorInRolesTable;
 	bool showBgColorInOwnRoles;
+	bool useSheetsConditionalColors;
 	bool ownWindowShowTitle;
 	bool lockOwnRoleWindow;
 	bool showHeaderInOwnRoles;
@@ -39,15 +49,16 @@ public:
 	int weekday;
 	bool showWings[7];
 	bool showCurrentWing;
-	int windowToggleKey;
+	Key windowToggleKey;
 	ShowOwnRolesMode showOwnRolesMode;
 	ShowAllRolesMode showAllRolesMode;
+	vector<pair<string, ImColor>> customColors;
 	void save() const;
 private:
 	void loadFromJson(json j);
 	json toJson() const;
 	vector<string> wingRolesRanges;
 	vector<string> wingHeaderRanges;
-	
+
 };
 

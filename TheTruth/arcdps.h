@@ -4,6 +4,7 @@
 #define arcdps_h_
 
 #include <stdint.h>
+#include <windows.h>
 
 /* arcdps export table */
 typedef struct arcdps_exports {
@@ -20,6 +21,7 @@ typedef struct arcdps_exports {
 	void* wnd_filter; /* wndproc callback like above, input filered using modifiers */
 	void* options_windows; /* called once per 'window' option checkbox, with null at the end, non-zero return disables drawing that option, fn(char* windowname) */
 } arcdps_exports;
+
 
 /* combat event - see evtc docs for details, revision param in combat cb is equivalent of revision byte header */
 typedef struct cbtevent {
@@ -110,5 +112,19 @@ typedef struct ag {
 	uint32_t self; /* 1 if self, 0 if not */
 	uint16_t team; /* sep21+ */
 } ag;
+
+typedef struct {
+	bool hideAll;
+	bool drawAlways;
+	bool uiMoveLock;
+	bool uiClickLock;
+	bool escClose;
+	uint16_t mod1Key;
+	uint16_t mod2Key;
+	uint16_t modMultiKey;
+} arc_config;
+
+arc_config readArcConfig();
+void initArcExports(HMODULE arcdll);
  
 #endif // !arcdps_h_
