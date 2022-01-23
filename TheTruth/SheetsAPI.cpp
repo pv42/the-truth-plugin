@@ -207,9 +207,10 @@ json getSheetFromRangeAndJson(const shared_ptr<json> whole_json, const string& r
 	if (whole_json == NULL) throw(std::exception("json handle is null"));
 	if (!whole_json->contains("sheets") || !(*whole_json)["sheets"].is_array() || (*whole_json)["sheets"].size() == 0) 
 		throw(std::exception("json does not contain a sheets"));
+	Logger::d(range.c_str());
 	int colon_index = -1;
-	for(int i = 1; i < range.size(); i++) { // empty named sheets are not allowed
-		if (range.at(i) == '\'') {
+	for(int i = 0; i < range.size(); i++) { // empty named sheets are not allowed
+		if (range.at(i) == '!') {
 			colon_index = i;
 			break;
 		}
@@ -271,10 +272,19 @@ void SheetsAPI::downloadSheetMetaData() {
 							transform(mapKey.begin(), mapKey.end(), mapKey.begin(), ::tolower);
 							Logger::d(string_format("set color for %s to %.2f %.2f %.2f", mapKey.c_str(), color.x, color.y, color.z));
 							colors_cache[mapKey] = color;
+						} else {
+							Logger::d("conditional boolean rule conddition does not contain userEnteredValue");
 						}
 					}
+				} else {
+					Logger::d(string_format("condtional rule is of unexpected fromat"));
 				}
 			}
+			if (sheet_json["conditionalFormats"].size() == 0) {
+				Logger::d("conditionalFormats lenght is 0 found");
+			}
+		} else {
+			Logger::d("no conditionalFormats found");
 		}
 	} catch (std::exception e) {
 		Logger::e("failed to download meta data");

@@ -22,9 +22,7 @@ Settings::Settings() {
 			Logger::e(e.what());
 		}
 	} else {
-		Logger::i("no settings file found, using default settings for [Cute]");
-		showBgColorInRolesTable = true;
-		showBgColorInOwnRoles = true;
+		Logger::i("no settings file found, using default settings");
 		ownWindowShowTitle = true;
 		lockOwnRoleWindow = false;
 		showHeaderInOwnRoles = false;
@@ -36,14 +34,16 @@ Settings::Settings() {
 		showAllRolesMode = ALL_AERODROME;
 		showCurrentWing = true;
 		showOwnRolesMode = OWN_ALWAYS;
-		sheetId = "19AEHyOVnXCzTlVmmKROu7AHLn9NYN7JzjLCNm7KE9Tc";
-		ownName = "Pv";
-		namesRange = "'The Truth'!A5:A14";
-		wingRolesRanges = vector<string>{ "", "", "'The Truth'!G22:I31", "'The Truth'!B22:E31", "'The Truth'!B5:E14", "'The Truth'!G5:I14", "'The Truth'!K5:M14"};
-		wingHeaderRanges = vector<string>{ "", "", "'The Truth'!G21:I21", "'The Truth'!B21:E21" ,"'The Truth'!B4:E4", "'The Truth'!G4:I4", "'The Truth'!K4:M4" };
 		windowToggleKey.keyCode = 82; // r
 		windowToggleKey.requireArcMod1 = true;
 		windowToggleKey.requireArcMod2 = true;
+		// color
+		sheetColorAlpha = 0.8;
+		showBgColorInRolesTable = true;
+		showBgColorInOwnRoles = true;
+		useSheetsConditionalColors = true;
+		// sheet setup
+		ownName = "Pv";
 	}
 }
 
@@ -60,6 +60,9 @@ void Settings::loadFromJson(json j) {
 	}
 	if (j.contains("useSheetsConditionalColors") && j["useSheetsConditionalColors"].is_boolean()) {
 		useSheetsConditionalColors = j["useSheetsConditionalColors"];
+	}
+	if (j.contains("sheetColorAlpha") && j["sheetColorAlpha"].is_number_float()) {
+		sheetColorAlpha = j["sheetColorAlpha"];
 	}
 	if (j.contains("sheetId") && j["sheetId"].is_string()) {
 		sheetId = j["sheetId"];
@@ -90,6 +93,9 @@ void Settings::loadFromJson(json j) {
 	}
 	if (j.contains("showCurrentWing") && j["showCurrentWing"].is_boolean()) {
 		lockOwnRoleWindow = j["showCurrentWing"];
+	}
+	if (j.contains("showInCharSelectAndLoading") && j["showInCharSelectAndLoading"].is_boolean()) {
+		showInCharSelectAndLoading = j["showInCharSelectAndLoading"];
 	}
 	if (j.contains("showHeaderInOwnRoles") && j["showHeaderInOwnRoles"].is_boolean()) {
 		showHeaderInOwnRoles = j["showHeaderInOwnRoles"];
@@ -190,6 +196,7 @@ json Settings::toJson() const {
 	j["showBgColorInRolesTable"] = showBgColorInRolesTable;
 	j["showBgColorInOwnRoles"] = showBgColorInOwnRoles;
 	j["useSheetsConditionalColors"] = useSheetsConditionalColors;
+	j["sheetColorAlpha"] = sheetColorAlpha;
 	j["sheetId"] = sheetId;
 	j["ownName"] = ownName;
 	j["namesRange"] = namesRange;
@@ -199,6 +206,7 @@ json Settings::toJson() const {
 	j["weekday"] = weekday;
 	j["showCurrentWing"] = showCurrentWing;
 	j["showAllRolesMode"] = showAllRolesMode;
+	j["showInCharSelectAndLoading"] = showInCharSelectAndLoading;
 	j["flipRowsAndCols"] = flipRowsAndCols;
 	j["windowToggleKey"] = windowToggleKey.keyCode;
 	j["windowToggleKeyMod1"] = windowToggleKey.requireArcMod1;

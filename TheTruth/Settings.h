@@ -42,6 +42,7 @@ public:
 	bool showBgColorInRolesTable;
 	bool showBgColorInOwnRoles;
 	bool useSheetsConditionalColors;
+	float sheetColorAlpha;
 	bool ownWindowShowTitle;
 	bool lockOwnRoleWindow;
 	bool showHeaderInOwnRoles;
@@ -52,6 +53,7 @@ public:
 	Key windowToggleKey;
 	ShowOwnRolesMode showOwnRolesMode;
 	ShowAllRolesMode showAllRolesMode;
+	bool showInCharSelectAndLoading;
 	vector<pair<string, ImColor>> customColors;
 	void save() const;
 private:

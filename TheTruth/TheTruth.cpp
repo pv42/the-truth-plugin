@@ -268,6 +268,7 @@ void TheTruth::UIOptions() {
 		ImGui::Combo("weekday", &settings.weekday, weekdays, 7);
 	}
 	ImGui::Checkbox("fixate own roles position", &settings.lockOwnRoleWindow);
+	ImGui::Checkbox("show during loading screens", &settings.showInCharSelectAndLoading);
 	ImGui::Checkbox("show title bar in own roles", &settings.ownWindowShowTitle);
 	ImGui::Checkbox("show bosses in own roles", &settings.showHeaderInOwnRoles);
 	ImGui::Separator();
@@ -284,7 +285,8 @@ void TheTruth::UIOptions() {
 	ImGui::Text("Colors");
 	ImGui::Checkbox("colors in own roles", &settings.showBgColorInOwnRoles);
 	ImGui::Checkbox("colors in all roles", &settings.showBgColorInRolesTable);
-	ImGui::Checkbox("use conditional formation colors", &settings.useSheetsConditionalColors);
+	ImGui::Checkbox("use sheet conditional formation colors", &settings.useSheetsConditionalColors);
+	ImGui::SliderFloat("conditional formating alpha", &settings.sheetColorAlpha, 0, 1);
 	if (ImGui::Button("custom colors###tt_cst_color_btn")) {
 		showCustomColorSetup = true;
 	}
@@ -324,19 +326,19 @@ int getWingByMap(int mapId) {
 	}
 }
 
-float getColorLightness(const ImVec4& color) {
+bool useInvertedTextColor(const ImVec4& color) {
 	float max = color.x;
 	float min = color.x;
 	if (color.y > max) max = color.y;
 	if (color.y < min) min = color.y;
 	if (color.z > max) max = color.z;
 	if (color.z < min) min = color.z;
-	return (max + min) / 2.0f;
+	return color.x * 0.299 + color.y * 0.587 + (color.z * 0.114) > 150./255.;
 }
 
 ImVec4 getTextColor(const ImVec4& bgColor) {
 	ImVec4 textCol = ImVec4(ImGui::GetStyleColorVec4(ImGuiCol_Text));
-	if (getColorLightness(bgColor) >= 0.5f) { // determin if black or white text depending on the bg color			
+	if (useInvertedTextColor(bgColor)) { // determin if black or white text depending on the bg color			
 		textCol.x = 1.0f - textCol.x;
 		textCol.y = 1.0f - textCol.y;
 		textCol.z = 1.0f - textCol.z;
@@ -348,6 +350,9 @@ map<string, ImVec4> getColorMap(const shared_ptr<SheetsAPI> api, const Settings&
 	map<string, ImVec4> colorMap;
 	if (settings.useSheetsConditionalColors) {
 		colorMap = api->getColors();
+		for (auto iter = colorMap.begin(); iter != colorMap.end(); iter++) {
+			iter->second.w = settings.sheetColorAlpha;
+		}
 	}
 	for (pair<string, ImColor> cc : settings.customColors) {
 		string key = cc.first;
@@ -717,8 +722,7 @@ bool shouldShowBigUI(int map, ShowAllRolesMode mode) {
 
 void TheTruth::ImGui(uint32_t not_charsel_or_loading) {
 	int mapId = mumbleApi.getMapId();
-	if (not_charsel_or_loading) {
-		
+	if (not_charsel_or_loading || settings.showInCharSelectAndLoading) {
 		int currentWing = getWingByMap(mapId);
 		if (currentWing > 0) {
 			if (sheetsAPI->hasWing(currentWing)) {
