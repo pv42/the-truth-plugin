@@ -729,7 +729,7 @@ void TheTruth::drawFirstTimeSetup() {
 		if (imported) {
 			ImGui::SameLine();
 			if (import_result) {
-				ImGui::Text("Import succesful.");
+				ImGui::Text("Import successful.");
 			} else {
 				ImGui::Text("Import failed.");
 			}
