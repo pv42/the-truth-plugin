@@ -11,6 +11,7 @@ using nlohmann::json;
 Settings::Settings() {
 	std::filesystem::path p = std::filesystem::current_path() / "addons" / "thetruth-settings.json";
 	if (std::filesystem::exists(p)) {
+		showFirstTimeSetup = false;
 		try {
 			json j;
 			std::ifstream file(p);
@@ -23,17 +24,22 @@ Settings::Settings() {
 		}
 	} else {
 		Logger::i("no settings file found, using default settings");
+		showFirstTimeSetup = true;
+		// windows
 		ownWindowShowTitle = true;
 		lockOwnRoleWindow = false;
+		showInCharSelectAndLoading = true;
 		showHeaderInOwnRoles = false;
 		flipRowsAndCols = false;
 		weekday = 6;
 		for (int wing = 1; wing <= 7; wing++) {
 			showWings[wing - 1] = wing >= 5;
+			wingRolesRanges.push_back("");
+			wingHeaderRanges.push_back("");
 		}
 		showAllRolesMode = ALL_AERODROME;
 		showCurrentWing = true;
-		showOwnRolesMode = OWN_ALWAYS;
+		showOwnRolesMode = OWN_TIMED;
 		windowToggleKey.keyCode = 82; // r
 		windowToggleKey.requireArcMod1 = true;
 		windowToggleKey.requireArcMod2 = true;
@@ -43,7 +49,7 @@ Settings::Settings() {
 		showBgColorInOwnRoles = true;
 		useSheetsConditionalColors = true;
 		// sheet setup
-		ownName = "Pv";
+		ownName = "my name";
 	}
 }
 

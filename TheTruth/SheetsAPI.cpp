@@ -16,12 +16,14 @@ SheetsAPI::SheetsAPI() : api_key("") , settings(), hasMetaData(false) {
 	Logger::d("default constr");
 }
 
-SheetsAPI::SheetsAPI(const string api_key_, Settings& setttings_) : api_key(api_key_), settings(setttings_) {
+SheetsAPI::SheetsAPI(const string api_key_, shared_ptr<Settings> settings_) : api_key(api_key_), settings(settings_) {
 	downloading = false;
 	hasMetaData = false;
 }
 
 unique_ptr<json> getSheetValuesJson(const string& sheetId, const string& range, const string api_key) {
+	if (sheetId.length() == 0 || range.length() == 0)
+		return NULL;
 	cpr::Url url = cpr::Url("https://sheets.googleapis.com/v4/spreadsheets/" + sheetId + "/values/" + range);
 	Logger::d(string_format("getting url %s", url.c_str()));
 	cpr::Response r = cpr::Get(url, cpr::Parameters{ { "key", api_key } });
@@ -148,9 +150,9 @@ string escape_table_range(string& unescaped_range) {
 void SheetsAPI::downloadNames() {
 	try {
 		Logger::d("downloading names");
-		string range = settings.namesRange;
+		string range = settings->namesRange;
 		range = escape_table_range(range);
-		names_cache = std::make_shared<vector<string>>(getValuesAs1DArray(settings.sheetId, range, api_key));
+		names_cache = std::make_shared<vector<string>>(getValuesAs1DArray(settings->sheetId, range, api_key));
 		Logger::d(string_format("got %d names", names_cache->size()));
 		Logger::d("downloaded names");
 		downloading = false;
@@ -161,15 +163,16 @@ void SheetsAPI::downloadNames() {
 }
 
 void SheetsAPI::downloadMainRoles() {
-	if (settings.mainRolesRange.length() == 0) {
+	if (settings->mainRolesRange.length() == 0) {
 		Logger::d("no main roles range");
 		main_roles_cache = std::make_shared<vector<string>>();
+		downloading = false;
 	} else {
 		try {
 			Logger::d("downloading main roles");
-			string range = settings.mainRolesRange;
+			string range = settings->mainRolesRange;
 			range = escape_table_range(range);
-			main_roles_cache = std::make_shared<vector<string>>(getValuesAs1DArray(settings.sheetId, range, api_key));
+			main_roles_cache = std::make_shared<vector<string>>(getValuesAs1DArray(settings->sheetId, range, api_key));
 			Logger::d(string_format("got %d main roles", main_roles_cache->size()));
 			Logger::d("downloaded main roles");
 			downloading = false;
@@ -183,18 +186,18 @@ void SheetsAPI::downloadMainRoles() {
 void SheetsAPI::downloadWing(int wing) {
 	try {
 		Logger::d(string_format("downloading wing %d", wing));
-		string range = settings.getWingRolesRange(wing);
+		string range = settings->getWingRolesRange(wing);
 		if (range.empty()) {
 			downloading = false;
 			return;
 		}
-		roles_cache[wing] = getValuesAs2DArray(settings.sheetId, escape_table_range(range), api_key, settings.flipRowsAndCols);
-		string header_range = settings.getWingHeaderRange(wing);
+		roles_cache[wing] = getValuesAs2DArray(settings->sheetId, escape_table_range(range), api_key, settings->flipRowsAndCols);
+		string header_range = settings->getWingHeaderRange(wing);
 		if (header_range.empty()) {
 			downloading = false;
 			return;
 		}
-		header_cache[wing] = getValuesAs1DArray(settings.sheetId, escape_table_range(header_range), api_key);
+		header_cache[wing] = getValuesAs1DArray(settings->sheetId, escape_table_range(header_range), api_key);
 		Logger::d(string_format("downloaded wing %d", wing));
 	} catch (std::exception e) {
 		Logger::e("failed to download wing");
@@ -236,14 +239,14 @@ void SheetsAPI::downloadSheetMetaData() {
 		// find a valid range
 		int wing = 1;
 		while (wing <= 7 && range.size() == 0) {
-			range = settings.getWingHeaderRange(wing);
+			range = settings->getWingHeaderRange(wing);
 			wing++;
 		}
 		if (range.size() == 0) {
 			Logger::w("could not find valid range to retrive conditional formating");
 			return;
 		}
-		shared_ptr<json> whole_json = getSheetJson(settings.sheetId, api_key);
+		shared_ptr<json> whole_json = getSheetJson(settings->sheetId, api_key);
 		json sheet_json = getSheetFromRangeAndJson(whole_json, range);
 		if (sheet_json.contains("conditionalFormats") && sheet_json["conditionalFormats"].is_array()) {
 			for (json format_json : sheet_json["conditionalFormats"]) {
@@ -288,7 +291,7 @@ void SheetsAPI::downloadSheetMetaData() {
 		}
 	} catch (std::exception e) {
 		Logger::e("failed to download meta data");
-		Logger::e(e.what());
+		Logger::e(string(e.what()));
 	}
 	hasMetaData = true; // dont try again if it failed
 	downloading = false;
@@ -307,7 +310,7 @@ void SheetsAPI::requestNames() {
 void SheetsAPI::requestMainRoles() {
 	if (downloading) return;
 	if (main_roles_cache == NULL) {
-		Logger::d("getting names");
+		Logger::d("getting main roles");
 		downloading = true;
 		if (downloadThread.joinable()) downloadThread.join();
 		downloadThread = thread(&SheetsAPI::downloadMainRoles, this);
@@ -337,6 +340,7 @@ void SheetsAPI::requestWing(int wing) {
 }
 
 void SheetsAPI::clearCache() {
+	names_cache = NULL;
 	main_roles_cache = NULL;
 	roles_cache.clear();
 	colors_cache.clear();

@@ -55,6 +55,7 @@ public:
 	ShowAllRolesMode showAllRolesMode;
 	bool showInCharSelectAndLoading;
 	vector<pair<string, ImColor>> customColors;
+	bool showFirstTimeSetup;
 	void save() const;
 private:
 	void loadFromJson(json j);

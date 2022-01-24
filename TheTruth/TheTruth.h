@@ -20,12 +20,13 @@ public:
 	void ImGui(uint32_t not_charsel_or_loading);
 	void UIOptions();
 private:
+	void drawFirstTimeSetup();
 	void drawSettingsUI();
 	void drawBigUI(int currentWing);
 	void drawSmallUI(int wing, vector<string>& roles, map<string, ImVec4> colorMap, const string& mainRole, shared_ptr<ImVec4> mainRoleColor);
 	MumbleApi mumbleApi;
 	shared_ptr<SheetsAPI> sheetsAPI;
-	Settings settings;
+	shared_ptr<Settings> settings;
 	arcdps_exports arc_exports;
 	bool showGoogleSheetSetup;
 	bool showCustomColorSetup;

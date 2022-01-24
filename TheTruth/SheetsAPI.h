@@ -19,7 +19,7 @@ class SheetsAPI {
 public:
 	SheetsAPI();
 	~SheetsAPI();
-	SheetsAPI(const string api_key, Settings& setttings);
+	SheetsAPI(const string api_key, const shared_ptr<Settings> setttings);
 	void downloadNames();
 	void downloadMainRoles();
 	void downloadWing(int wing);
@@ -36,7 +36,7 @@ public:
 	void clearCache();
 	bool isDownloading();
 private:
-	Settings settings;
+	const shared_ptr<Settings> settings;
 	atomic_bool downloading;
 	bool hasMetaData;
 	string api_key;
