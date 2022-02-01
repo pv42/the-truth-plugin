@@ -268,7 +268,7 @@ void TheTruth::UIOptions() {
 		};
 		ImGui::Combo("weekday", &settings->weekday, weekdays, 7);
 	}
-	ImGui::Checkbox("fixate own roles position", &settings->lockOwnRoleWindow);
+	ImGui::Checkbox("lock own roles window", &settings->lockOwnRoleWindow);
 	ImGui::Checkbox("show during loading screens", &settings->showInCharSelectAndLoading);
 	ImGui::Checkbox("show title bar in own roles", &settings->ownWindowShowTitle);
 	ImGui::Checkbox("show bosses in own roles", &settings->showHeaderInOwnRoles);
@@ -365,15 +365,15 @@ map<string, ImVec4> getColorMap(const shared_ptr<SheetsAPI> api, const std::shar
 
 void TheTruth::drawSmallUI(int wing, vector<string>& roles, map<string, ImVec4> colorMap, const string& mainRole,  const shared_ptr<ImVec4> mainRoleColor) {
 	if(showSmallUI) {
+		int height = ImGui::GetTextLineHeightWithSpacing() * (roles.size() + (settings->ownWindowShowTitle ? 1 : 0)) + (settings->ownWindowShowTitle ? 9 : 5);
 		if(settings->showHeaderInOwnRoles) {
-			ImGui::SetNextWindowSizeConstraints(ImVec2(100, 0), ImVec2(150, -1));
+			ImGui::SetNextWindowSizeConstraints(ImVec2(100, height), ImVec2(200, height));
 		} else {
-			ImGui::SetNextWindowSizeConstraints(ImVec2(50,0), ImVec2(100, -1));
+			ImGui::SetNextWindowSizeConstraints(ImVec2(50, height), ImVec2(150, height));
 		}
 		string title = string_format("Wing %d###CurrentWingRole", wing);
-		ImVec2 size(-1, ImGui::GetTextLineHeightWithSpacing() * (roles.size() + (settings->ownWindowShowTitle ? 1 : 0)) + (settings->ownWindowShowTitle ? 9 : 5));
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-		ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 		if (settings->lockOwnRoleWindow) {
 			flags |= ImGuiWindowFlags_NoInputs;
 		}
@@ -383,7 +383,6 @@ void TheTruth::drawSmallUI(int wing, vector<string>& roles, map<string, ImVec4> 
 			if (!showSmallUI) { 
 				settings->showOwnRolesMode = OWN_NEVER; 
 			}
-			ImGui::SetWindowSize(size, 0); 
 			int index = 0;
 			if(ImGui::BeginTable("ownRolesTable", settings->showHeaderInOwnRoles ? 2 : 1, ImGuiTableFlags_NoPadOuterX)) {
 				vector<string> headers = sheetsAPI->getHeader(wing);
@@ -715,6 +714,7 @@ void TheTruth::drawSettingsUI() {
 bool imported;
 bool import_result;
 void TheTruth::drawFirstTimeSetup() {
+	ImGui::SetNextWindowSizeConstraints(ImVec2(750, 200), ImVec2(FLT_MAX, FLT_MAX));
 	if (ImGui::Begin("TheTruth Setup", (bool*)0, ImGuiWindowFlags_NoCollapse)) {
 		ImGui::Text("Please configure the settings. This is only required once. You may change the settings at any time.");
 		ImGui::Text("Import Google sheet settings:");

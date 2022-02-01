@@ -98,7 +98,7 @@ void Settings::loadFromJson(json j) {
 		showAllRolesMode = (ShowAllRolesMode)j["showAllRolesMode"];
 	}
 	if (j.contains("showCurrentWing") && j["showCurrentWing"].is_boolean()) {
-		lockOwnRoleWindow = j["showCurrentWing"];
+		showCurrentWing = j["showCurrentWing"];
 	}
 	if (j.contains("showInCharSelectAndLoading") && j["showInCharSelectAndLoading"].is_boolean()) {
 		showInCharSelectAndLoading = j["showInCharSelectAndLoading"];
